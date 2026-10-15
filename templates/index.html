@@ -1279,6 +1279,11 @@
 
       <!-- TAB 5: STAMPS & HOURS -->
       <div class="tab-content" id="tab-stamps">
+        <div style="background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 8px; padding: 10px 14px; margin-bottom: 14px; font-size: 12px; color: #0369a1; display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;">
+          <span>🌐 <strong>Universal Work Stamps:</strong> Standard codes & colors (<strong>8, WO, PH, SL, AL, A, V</strong>) are synchronized across all departments so timesheets stay consistent. You can edit hours, add custom shifts, or restore defaults anytime.</span>
+          <button type="button" class="btn btn-outline btn-sm" onclick="resetToUniversalStamps()" style="background: #ffffff; border-color: #0284c7; color: #0284c7; font-weight: 700; white-space: nowrap;">🔄 Restore Universal Stamps</button>
+        </div>
+
         <h3 style="font-size: 14px; margin-bottom: 6px;">Create / Edit Attendance Stamp</h3>
 
         <div class="edit-banner" id="stampEditBanner">
@@ -1310,10 +1315,25 @@
             <input type="color" id="stampTxt" class="form-control" value="#3730A3" style="height: 40px; padding: 2px;">
           </div>
         </div>
+        <div style="margin-bottom: 12px;">
+          <label style="font-size: 11px; font-weight: 700; color: #64748b; margin-bottom: 5px; display: block;">Quick Color Palette Presets</label>
+          <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+            <button type="button" class="btn btn-outline btn-sm" onclick="applyColorPreset('#F1F5F9', '#334155')" style="font-size: 11px; padding: 3px 8px; background: #F1F5F9; color: #334155; border: 1px solid #cbd5e1;">8 (Slate)</button>
+            <button type="button" class="btn btn-outline btn-sm" onclick="applyColorPreset('#FEF3C7', '#B45309')" style="font-size: 11px; padding: 3px 8px; background: #FEF3C7; color: #B45309; border: 1px solid #fde68a;">WO (Amber)</button>
+            <button type="button" class="btn btn-outline btn-sm" onclick="applyColorPreset('#D1FAE5', '#065F46')" style="font-size: 11px; padding: 3px 8px; background: #D1FAE5; color: #065F46; border: 1px solid #a7f3d0;">PH (Emerald)</button>
+            <button type="button" class="btn btn-outline btn-sm" onclick="applyColorPreset('#E0F2FE', '#0369A1')" style="font-size: 11px; padding: 3px 8px; background: #E0F2FE; color: #0369A1; border: 1px solid #bae6fd;">SL (Sky Blue)</button>
+            <button type="button" class="btn btn-outline btn-sm" onclick="applyColorPreset('#E0E7FF', '#3730A3')" style="font-size: 11px; padding: 3px 8px; background: #E0E7FF; color: #3730A3; border: 1px solid #c7d2fe;">AL (Indigo)</button>
+            <button type="button" class="btn btn-outline btn-sm" onclick="applyColorPreset('#FEE2E2', '#991B1B')" style="font-size: 11px; padding: 3px 8px; background: #FEE2E2; color: #991B1B; border: 1px solid #fecaca;">A (Soft Red)</button>
+            <button type="button" class="btn btn-outline btn-sm" onclick="applyColorPreset('#FFE4E6', '#9F1239')" style="font-size: 11px; padding: 3px 8px; background: #FFE4E6; color: #9F1239; border: 1px solid #fecdd3;">V (Rose)</button>
+          </div>
+        </div>
         <button id="btnSaveStamp" class="btn btn-primary" onclick="submitStamp()" style="width: 100%; justify-content: center;">💾 Save Stamp Definition</button>
 
         <div class="item-list">
-          <h4 style="font-size: 13px; margin-bottom: 10px;">Configured Stamps & Assigned Hours</h4>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <h4 style="font-size: 13px; margin: 0;">Configured Stamps & Assigned Hours</h4>
+            <button type="button" class="btn btn-outline btn-sm" onclick="resetToUniversalStamps()" style="font-size: 11px; padding: 3px 8px; color: #0284c7; border-color: #bae6fd;">🔄 Restore Defaults</button>
+          </div>
           <div id="stampsList">
             {% for st in stamps %}
             <div class="item-card">
@@ -2180,8 +2200,43 @@
         sel.innerHTML = getStampSelectOptions(curVal);
       });
 
+      const paletteContainer = document.getElementById('paletteContainer');
+      if (paletteContainer) {
+        let paletteHtml = `
+          <span style="font-size: 11px; font-weight: 700; color: #64748b; margin-right: 2px;">Stamp Mode:</span>
+          <button class="palette-btn ${activeStamp === 'TOGGLE' ? 'active' : ''}" onclick="setStampMode('TOGGLE')">Cycle</button>
+        `;
+        stampsData.forEach(st => {
+          paletteHtml += `
+            <button class="palette-btn ${activeStamp === st.code ? 'active' : ''}" onclick="setStampMode('${escapeHtml(st.code)}')">${escapeHtml(st.code)} (${st.hours}h)</button>
+          `;
+        });
+        paletteContainer.innerHTML = paletteHtml;
+      }
+
       cancelEditStamp();
       applyCellColors();
+    }
+
+    function applyColorPreset(bg, txt) {
+      document.getElementById('stampBg').value = bg;
+      document.getElementById('stampTxt').value = txt;
+    }
+
+    async function resetToUniversalStamps() {
+      if (!confirm('Restore all work stamps to the universal company standard codes & colors (8, WO, PH, SL, AL, A, V)?')) return;
+      try {
+        const res = await fetch('/api/stamps/reset-universal', { method: 'POST' });
+        const data = await res.json();
+        if (data.success && data.stamps) {
+          renderStampsUI(data.stamps);
+          showDrawerToast('✓ Universal standard stamps restored successfully!');
+        } else {
+          alert('Error: ' + (data.detail || 'Could not restore universal stamps'));
+        }
+      } catch (e) {
+        alert('Network error: ' + e);
+      }
     }
 
     async function submitStamp() {

@@ -145,17 +145,22 @@ def load_properties(workspace: str = "default") -> List[Dict[str, Any]]:
     ] if workspace in ["default", "shajjad"] else []
     return load_json('properties.json', default, workspace=workspace)
 
+UNIVERSAL_STAMPS: List[Dict[str, Any]] = [
+    {"code": "8", "name": "Regular Work", "hours": 8, "bg_color": "#F1F5F9", "text_color": "#334155"},
+    {"code": "WO", "name": "Weekly Off", "hours": 8, "bg_color": "#FEF3C7", "text_color": "#B45309"},
+    {"code": "PH", "name": "Public Holiday", "hours": 8, "bg_color": "#D1FAE5", "text_color": "#065F46"},
+    {"code": "SL", "name": "Sick Leave", "hours": 8, "bg_color": "#E0F2FE", "text_color": "#0369A1"},
+    {"code": "AL", "name": "Annual Leave", "hours": 0, "bg_color": "#E0E7FF", "text_color": "#3730A3"},
+    {"code": "A", "name": "Absent", "hours": 0, "bg_color": "#FEE2E2", "text_color": "#991B1B"},
+    {"code": "V", "name": "Vacation", "hours": 0, "bg_color": "#FFE4E6", "text_color": "#9F1239"}
+]
+
 def load_stamps(workspace: str = "default") -> List[Dict[str, Any]]:
-    default = [
-        {"code": "8", "name": "Regular Shift (8h)", "hours": 8, "bg_color": "#F8FAFC", "text_color": "#334155"},
-        {"code": "WO", "name": "Weekly Off (Paid)", "hours": 8, "bg_color": "#DCFCE7", "text_color": "#166534"},
-        {"code": "PH", "name": "Public Holiday (Paid)", "hours": 8, "bg_color": "#FEF9C3", "text_color": "#854D0E"},
-        {"code": "SL", "name": "Sick Leave (Paid)", "hours": 8, "bg_color": "#FFEDD5", "text_color": "#9A3412"},
-        {"code": "AL", "name": "Annual Leave", "hours": 0, "bg_color": "#FEE2E2", "text_color": "#991B1B"},
-        {"code": "A", "name": "Absent", "hours": 0, "bg_color": "#F3E8FF", "text_color": "#6B21A8"},
-        {"code": "V", "name": "Vacation", "hours": 0, "bg_color": "#CFFAFE", "text_color": "#155E75"}
-    ] if workspace in ["default", "shajjad"] else []
-    return load_json('stamps.json', default, workspace=workspace)
+    # Universal stamps are provided by default for all workspaces so every colleague has standard conventions
+    stamps = load_json('stamps.json', None, workspace=workspace)
+    if stamps is None or len(stamps) == 0:
+        return [dict(s) for s in UNIVERSAL_STAMPS]
+    return stamps
 
 def load_authorizers(workspace: str = "default") -> List[Dict[str, Any]]:
     default = [
@@ -640,6 +645,13 @@ async def delete_stamp(request: Request, code: str):
     code = code.strip().upper()
     stamps = load_stamps(workspace=ws)
     stamps = [s for s in stamps if str(s.get("code", "")).strip().upper() != code]
+    save_json('stamps.json', stamps, workspace=ws)
+    return {"success": True, "stamps": stamps}
+
+@app.post("/api/stamps/reset-universal")
+async def reset_universal_stamps(request: Request):
+    ws = get_current_workspace(request)
+    stamps = [dict(s) for s in UNIVERSAL_STAMPS]
     save_json('stamps.json', stamps, workspace=ws)
     return {"success": True, "stamps": stamps}
 

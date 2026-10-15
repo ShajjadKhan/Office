@@ -143,12 +143,28 @@ def init_workspace(workspace: str, department_name: str = "General Department"):
     os.makedirs(ws_dir, exist_ok=True)
     os.makedirs(os.path.join(ws_dir, "saved_months"), exist_ok=True)
     
-    # 100% Clean Blank Slate - Zero pre-existing data
-    for fname in ["associates.json", "stamps.json", "companies.json", "properties.json", "authorizers.json"]:
+    UNIVERSAL_STAMPS = [
+        {"code": "8", "name": "Regular Work", "hours": 8, "bg_color": "#F1F5F9", "text_color": "#334155"},
+        {"code": "WO", "name": "Weekly Off", "hours": 8, "bg_color": "#FEF3C7", "text_color": "#B45309"},
+        {"code": "PH", "name": "Public Holiday", "hours": 8, "bg_color": "#D1FAE5", "text_color": "#065F46"},
+        {"code": "SL", "name": "Sick Leave", "hours": 8, "bg_color": "#E0F2FE", "text_color": "#0369A1"},
+        {"code": "AL", "name": "Annual Leave", "hours": 0, "bg_color": "#E0E7FF", "text_color": "#3730A3"},
+        {"code": "A", "name": "Absent", "hours": 0, "bg_color": "#FEE2E2", "text_color": "#991B1B"},
+        {"code": "V", "name": "Vacation", "hours": 0, "bg_color": "#FFE4E6", "text_color": "#9F1239"}
+    ]
+
+    # Clean Blank Slate for private department data
+    for fname in ["associates.json", "companies.json", "properties.json", "authorizers.json"]:
         file_path = os.path.join(ws_dir, fname)
         if not os.path.exists(file_path):
             with open(file_path, "w", encoding="utf-8") as f:
                 json.dump([], f, indent=2)
+                
+    # Standard Universal Company Stamps (Consistent across all departments)
+    stamps_file = os.path.join(ws_dir, "stamps.json")
+    if not os.path.exists(stamps_file):
+        with open(stamps_file, "w", encoding="utf-8") as f:
+            json.dump(UNIVERSAL_STAMPS, f, indent=2)
             
     # Default Settings (only store their department name for report headers)
     settings_file = os.path.join(ws_dir, "default_settings.json")
