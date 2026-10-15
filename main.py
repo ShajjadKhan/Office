@@ -134,17 +134,19 @@ def load_associates(workspace: str = "default") -> List[Dict[str, Any]]:
     return load_json('associates.json', [], workspace=workspace)
 
 def load_companies(workspace: str = "default") -> List[str]:
-    return load_json('companies.json', ["Dar Al Ishraq", "Dar Al Wafa", "Nasim Alenjaz", "Sama Al riyadha", "Soundline", "Work Force", "Qasir AL Nokba", "Tamkeen"], workspace=workspace)
+    default = ["Dar Al Ishraq", "Dar Al Wafa", "Nasim Alenjaz", "Sama Al riyadha", "Soundline", "Work Force", "Qasir AL Nokba", "Tamkeen"] if workspace in ["default", "shajjad"] else []
+    return load_json('companies.json', default, workspace=workspace)
 
 def load_properties(workspace: str = "default") -> List[Dict[str, Any]]:
-    return load_json('properties.json', [
+    default = [
         {"code": "RMH", "name": "Riyadh Marriott Hotel"},
         {"code": "MEA", "name": "Marriott Executive Apartments"},
         {"code": "Housing", "name": "Staff Housing"}
-    ], workspace=workspace)
+    ] if workspace in ["default", "shajjad"] else []
+    return load_json('properties.json', default, workspace=workspace)
 
 def load_stamps(workspace: str = "default") -> List[Dict[str, Any]]:
-    return load_json('stamps.json', [
+    default = [
         {"code": "8", "name": "Regular Shift (8h)", "hours": 8, "bg_color": "#F8FAFC", "text_color": "#334155"},
         {"code": "WO", "name": "Weekly Off (Paid)", "hours": 8, "bg_color": "#DCFCE7", "text_color": "#166534"},
         {"code": "PH", "name": "Public Holiday (Paid)", "hours": 8, "bg_color": "#FEF9C3", "text_color": "#854D0E"},
@@ -152,15 +154,17 @@ def load_stamps(workspace: str = "default") -> List[Dict[str, Any]]:
         {"code": "AL", "name": "Annual Leave", "hours": 0, "bg_color": "#FEE2E2", "text_color": "#991B1B"},
         {"code": "A", "name": "Absent", "hours": 0, "bg_color": "#F3E8FF", "text_color": "#6B21A8"},
         {"code": "V", "name": "Vacation", "hours": 0, "bg_color": "#CFFAFE", "text_color": "#155E75"}
-    ], workspace=workspace)
+    ] if workspace in ["default", "shajjad"] else []
+    return load_json('stamps.json', default, workspace=workspace)
 
 def load_authorizers(workspace: str = "default") -> List[Dict[str, Any]]:
-    return load_json('authorizers.json', [
+    default = [
         {"id": 1, "title": "Department Head", "name": "", "is_active": True},
         {"id": 2, "title": "Director of Human Resource", "name": "", "is_active": True},
         {"id": 3, "title": "Director of Finance", "name": "", "is_active": True},
         {"id": 4, "title": "General Manager", "name": "Eng. Khalid Al-Otaibi", "is_active": True}
-    ], workspace=workspace)
+    ] if workspace in ["default", "shajjad"] else []
+    return load_json('authorizers.json', default, workspace=workspace)
 
 def load_settings(workspace: str = "default") -> Dict[str, Any]:
     custom = load_json('default_settings.json', None, workspace=workspace)

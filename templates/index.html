@@ -797,8 +797,8 @@
     <header class="top-header">
       <div class="brand-section">
         <button class="btn-drawer-open" onclick="openDrawer('authorizers')">
-          <span>☰</span>
-          <span>Manage Master Data</span>
+          <span>⚙️</span>
+          <span>{% if is_admin %}Manage Master Data{% else %}Department Setup & Data{% endif %}</span>
         </button>
         <div class="brand">
           <div class="brand-icon">OW</div>
@@ -880,6 +880,10 @@
           <div class="tag" style="background: {{ st.bg_color }}; color: {{ st.text_color }}; border: 1px solid rgba(0,0,0,0.1);">
             {{ st.code }} <span class="desc">({{ st.name }} = {{ st.hours }}h)</span>
           </div>
+        {% else %}
+          <span style="font-size: 12px; color: var(--text-muted); font-style: italic;">
+            No custom stamps created yet. You can create stamps (e.g. 8, WO, PH) in <strong>Department Setup &amp; Data</strong>.
+          </span>
         {% endfor %}
       </div>
     </div>
@@ -916,7 +920,7 @@
             <input type="text"
                    id="shortcutEmpSearch"
                    class="shortcut-search-input"
-                   placeholder="🔍 Type employee name (e.g. 'Shajjad')..."
+                   placeholder="🔍 Type employee name (e.g. 'Ahmed')..."
                    autocomplete="off"
                    oninput="handleEmpSearchInput(this.value)">
             <input type="hidden" id="shortcutSelectedAssocId" value="">
@@ -1031,8 +1035,10 @@
           {% if a.is_active %}
             <span class="auth-pill">✍️ {{ a.title }} {% if a.name %}({{ a.name }}){% endif %}</span>
           {% endif %}
+        {% else %}
+          <span style="font-size: 12px; color: #64748b; font-style: italic;">No authorizer signatures configured yet.</span>
         {% endfor %}
-        <button class="btn btn-outline btn-sm" onclick="openDrawer('authorizers')" style="margin-left: auto;">⚙️ Manage Signatures</button>
+        <button class="btn btn-outline btn-sm" onclick="openDrawer('authorizers')" style="margin-left: auto;">⚙️ {% if is_admin %}Manage Signatures{% else %}Setup Signatures{% endif %}</button>
       </div>
     </div>
 
@@ -1075,7 +1081,7 @@
 
   <div class="drawer-panel" id="drawerPanel">
     <div class="drawer-header">
-      <h2>⚙️ Manage Master Data</h2>
+      <h2>⚙️ {% if is_admin %}Manage Master Data{% else %}{{ current_user_dept }} Setup &amp; Data{% endif %}</h2>
       <button class="btn-close-drawer" onclick="closeDrawer()">✕</button>
     </div>
 
@@ -1105,11 +1111,11 @@
 
         <div class="form-group">
           <label>Signature Title / Designation</label>
-          <input type="text" id="authTitleInput" class="form-control" placeholder="e.g. General Manager, Operations Director, Dept Head">
+          <input type="text" id="authTitleInput" class="form-control" placeholder="e.g. Department Head, Operations Director">
         </div>
         <div class="form-group">
           <label>Signer Name (Optional)</label>
-          <input type="text" id="authNameInput" class="form-control" placeholder="e.g. Eng. Khalid Al-Otaibi">
+          <input type="text" id="authNameInput" class="form-control" placeholder="e.g. Signer Full Name">
         </div>
         <button id="btnSaveAuthorizer" class="btn btn-primary" onclick="submitAuthorizer()" style="width: 100%; justify-content: center;">➕ Add Authorizer</button>
 
@@ -1129,6 +1135,10 @@
                 </button>
                 <button class="btn btn-danger btn-sm" onclick="deleteAuthorizer({{ a.id }})">Delete</button>
               </div>
+            </div>
+            {% else %}
+            <div style="text-align: center; padding: 22px; color: #64748b; font-size: 13px; background: #f8fafc; border: 1.5px dashed #cbd5e1; border-radius: 8px;">
+              No authorizer signatures added yet. Use the form above to add report signers.
             </div>
             {% endfor %}
           </div>
@@ -1157,6 +1167,9 @@
           <div class="form-group">
             <label>Buyout Company</label>
             <select id="empCompany" class="form-control">
+              {% if companies|length == 0 %}
+                <option value="" disabled selected>⚠️ Add a company in the Companies tab first</option>
+              {% endif %}
               {% for c in companies %}
                 <option value="{{ c }}">{{ c }}</option>
               {% endfor %}
@@ -1165,6 +1178,9 @@
           <div class="form-group">
             <label>Property</label>
             <select id="empProperty" class="form-control">
+              {% if properties|length == 0 %}
+                <option value="" disabled selected>⚠️ Add a property in the Properties tab first</option>
+              {% endif %}
               {% for p in properties %}
                 <option value="{{ p.code }}">{{ p.code }} ({{ p.name }})</option>
               {% endfor %}
@@ -1178,7 +1194,7 @@
         <button id="btnSaveEmployee" class="btn btn-primary" onclick="submitEmployee()" style="width: 100%; justify-content: center;">➕ Save Associate</button>
 
         <div class="item-list">
-          <h4 style="font-size: 13px; margin-bottom: 10px;">Master Staff Database ({{ all_associates|length }})</h4>
+          <h4 style="font-size: 13px; margin-bottom: 10px;">{% if is_admin %}Master Staff Database{% else %}Department Staff Roster{% endif %} ({{ all_associates|length }})</h4>
           <div id="employeeList">
             {% for a in all_associates %}
             <div class="item-card">
@@ -1191,6 +1207,10 @@
                 <button class="btn btn-danger btn-sm" onclick="deleteEmployee({{ a.id }})">Delete</button>
               </div>
             </div>
+            {% else %}
+            <div style="text-align: center; padding: 22px; color: #64748b; font-size: 13px; background: #f8fafc; border: 1.5px dashed #cbd5e1; border-radius: 8px;">
+              No staff registered yet. Use the form above to register your department associates.
+            </div>
             {% endfor %}
           </div>
         </div>
@@ -1201,7 +1221,7 @@
         <h3 style="font-size: 14px; margin-bottom: 12px;">Add Third-Party Buyout Company</h3>
         <div class="form-group">
           <label>Company Name</label>
-          <input type="text" id="compNameInput" class="form-control" placeholder="e.g. Al Safwa Manpower">
+          <input type="text" id="compNameInput" class="form-control" placeholder="e.g. Supplier Company Name">
         </div>
         <button class="btn btn-primary" onclick="submitCompany()" style="width: 100%; justify-content: center;">➕ Add Company</button>
 
@@ -1215,6 +1235,10 @@
               </div>
               <button class="btn btn-danger btn-sm" onclick="deleteCompany('{{ c }}')">Delete</button>
             </div>
+            {% else %}
+            <div style="text-align: center; padding: 22px; color: #64748b; font-size: 13px; background: #f8fafc; border: 1.5px dashed #cbd5e1; border-radius: 8px;">
+              No supplier companies added yet. Use the form above to add companies.
+            </div>
             {% endfor %}
           </div>
         </div>
@@ -1222,14 +1246,14 @@
 
       <!-- TAB 4: PROPERTIES -->
       <div class="tab-content" id="tab-properties">
-        <h3 style="font-size: 14px; margin-bottom: 12px;">Add / Edit Hotel Property</h3>
+        <h3 style="font-size: 14px; margin-bottom: 12px;">Add / Edit Property or Location</h3>
         <div class="form-group">
           <label>Property Code (Short)</label>
-          <input type="text" id="propCodeInput" class="form-control" placeholder="e.g. RMH, MEA, COURTYARD">
+          <input type="text" id="propCodeInput" class="form-control" placeholder="e.g. MAIN, HQ, BRANCH-1">
         </div>
         <div class="form-group">
           <label>Full Property Name</label>
-          <input type="text" id="propNameInput" class="form-control" placeholder="e.g. Riyadh Marriott Hotel">
+          <input type="text" id="propNameInput" class="form-control" placeholder="e.g. Main Facility, Corporate Office">
         </div>
         <button class="btn btn-primary" onclick="submitProperty()" style="width: 100%; justify-content: center;">➕ Save Property</button>
 
@@ -1243,6 +1267,10 @@
                 <p>{{ p.name }}</p>
               </div>
               <button class="btn btn-danger btn-sm" onclick="deleteProperty('{{ p.code }}')">Delete</button>
+            </div>
+            {% else %}
+            <div style="text-align: center; padding: 22px; color: #64748b; font-size: 13px; background: #f8fafc; border: 1.5px dashed #cbd5e1; border-radius: 8px;">
+              No properties added yet. Use the form above to add your department locations.
             </div>
             {% endfor %}
           </div>
@@ -1300,6 +1328,10 @@
                 <button class="btn btn-outline btn-sm" onclick="editStamp('{{ st.code }}')">✏️ Edit</button>
                 <button class="btn btn-danger btn-sm" onclick="deleteStamp('{{ st.code }}')">Delete</button>
               </div>
+            </div>
+            {% else %}
+            <div style="text-align: center; padding: 22px; color: #64748b; font-size: 13px; background: #f8fafc; border: 1.5px dashed #cbd5e1; border-radius: 8px;">
+              No custom stamps created yet. Use the form above to add your department work stamps (e.g. 8 for Regular Work, WO for Weekly Off, PH for Public Holiday).
             </div>
             {% endfor %}
           </div>
@@ -1584,7 +1616,7 @@
             <span>•</span>
             <span>${escapeHtml(a.company)}</span>
             <span>•</span>
-            <span class="badge ${a.property === 'RMH' ? 'badge-rmh' : 'badge-mea'}">${escapeHtml(a.property)}</span>
+            <span class="badge" style="background:#e0f2fe; color:#0369a1;">${escapeHtml(a.property || '')}</span>
           </div>
         </div>
       `).join('');
@@ -2096,7 +2128,7 @@
       }
     }
 
-    /* ================= Workspace & Master Control Logic ================= */
+    /* ================= Workspace & Department Logic ================= */
     async function switchWorkspace(wsId) {
       if (!wsId) return;
       try {

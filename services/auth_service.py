@@ -143,64 +143,19 @@ def init_workspace(workspace: str, department_name: str = "General Department"):
     os.makedirs(ws_dir, exist_ok=True)
     os.makedirs(os.path.join(ws_dir, "saved_months"), exist_ok=True)
     
-    # 1. Blank associates list (starts fresh for new colleague)
-    assoc_file = os.path.join(ws_dir, "associates.json")
-    if not os.path.exists(assoc_file):
-        with open(assoc_file, "w", encoding="utf-8") as f:
-            json.dump([], f, indent=2)
+    # 100% Clean Blank Slate - Zero pre-existing data
+    for fname in ["associates.json", "stamps.json", "companies.json", "properties.json", "authorizers.json"]:
+        file_path = os.path.join(ws_dir, fname)
+        if not os.path.exists(file_path):
+            with open(file_path, "w", encoding="utf-8") as f:
+                json.dump([], f, indent=2)
             
-    # 2. Configured starter stamps (they can edit or add new stamps anytime)
-    stamps_file = os.path.join(ws_dir, "stamps.json")
-    if not os.path.exists(stamps_file):
-        default_stamps = [
-            {"code": "8", "name": "Regular Shift (8h)", "hours": 8, "bg_color": "#F8FAFC", "text_color": "#334155"},
-            {"code": "WO", "name": "Weekly Off (Paid)", "hours": 8, "bg_color": "#DCFCE7", "text_color": "#166534"},
-            {"code": "PH", "name": "Public Holiday (Paid)", "hours": 8, "bg_color": "#FEF9C3", "text_color": "#854D0E"},
-            {"code": "SL", "name": "Sick Leave (Paid)", "hours": 8, "bg_color": "#FFEDD5", "text_color": "#9A3412"},
-            {"code": "AL", "name": "Annual Leave", "hours": 0, "bg_color": "#FEE2E2", "text_color": "#991B1B"},
-            {"code": "A", "name": "Absent", "hours": 0, "bg_color": "#F3E8FF", "text_color": "#6B21A8"},
-            {"code": "V", "name": "Vacation", "hours": 0, "bg_color": "#CFFAFE", "text_color": "#155E75"}
-        ]
-        with open(stamps_file, "w", encoding="utf-8") as f:
-            json.dump(default_stamps, f, indent=2)
-            
-    # 3. Companies list
-    companies_file = os.path.join(ws_dir, "companies.json")
-    if not os.path.exists(companies_file):
-        with open(companies_file, "w", encoding="utf-8") as f:
-            json.dump(["Dar Al Ishraq", "Dar Al Wafa", "Nasim Alenjaz", "Sama Al riyadha", "Soundline", "Work Force", "Qasir AL Nokba", "Tamkeen"], f, indent=2)
-            
-    # 4. Properties list
-    props_file = os.path.join(ws_dir, "properties.json")
-    if not os.path.exists(props_file):
-        with open(props_file, "w", encoding="utf-8") as f:
-            json.dump([
-                {"code": "RMH", "name": "Riyadh Marriott Hotel"},
-                {"code": "MEA", "name": "Marriott Executive Apartments"},
-                {"code": "Housing", "name": "Staff Housing"}
-            ], f, indent=2)
-            
-    # 5. Authorizers
-    auth_file = os.path.join(ws_dir, "authorizers.json")
-    if not os.path.exists(auth_file):
-        with open(auth_file, "w", encoding="utf-8") as f:
-            json.dump([
-                {"id": 1, "title": "Department Head", "name": "", "is_active": True},
-                {"id": 2, "title": "Director of Human Resource", "name": "", "is_active": True},
-                {"id": 3, "title": "Director of Finance", "name": "", "is_active": True},
-                {"id": 4, "title": "General Manager", "name": "Eng. Khalid Al-Otaibi", "is_active": True}
-            ], f, indent=2)
-            
-    # 6. Default Settings (Department name)
+    # Default Settings (only store their department name for report headers)
     settings_file = os.path.join(ws_dir, "default_settings.json")
     if not os.path.exists(settings_file):
         with open(settings_file, "w", encoding="utf-8") as f:
             json.dump({
-                "properties": {
-                    "RMH": "Riyadh Marriott Hotel",
-                    "MEA": "Marriott Executive Apartments",
-                    "Housing": "Staff Housing"
-                },
+                "properties": {},
                 "department_names": {
                     "0430": department_name
                 }
