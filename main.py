@@ -105,9 +105,9 @@ def get_current_workspace(request: Request) -> str:
         if ws_param and ws_param.strip():
             return ws_param.strip()
         cookie_ws = request.cookies.get("ow_active_ws")
-        if cookie_ws and cookie_ws.strip():
+        if cookie_ws and cookie_ws.strip() and cookie_ws.strip() not in ["default", "shajjad"]:
             return cookie_ws.strip()
-        return u.get("workspace", "default")
+        return "admin"
     else:
         # Colleague is strictly isolated to their own department workspace
         return u.get("workspace", user)
@@ -155,11 +155,29 @@ UNIVERSAL_STAMPS: List[Dict[str, Any]] = [
     {"code": "V", "name": "Vacation", "hours": 0, "bg_color": "#FFE4E6", "text_color": "#9F1239"}
 ]
 
+def load_universal_stamps() -> List[Dict[str, Any]]:
+    path = os.path.join(DATA_DIR, "stamps.json")
+    if os.path.exists(path):
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                stamps = json.load(f)
+                if stamps and isinstance(stamps, list) and len(stamps) > 0:
+                    return stamps
+        except Exception as e:
+            print(f"Error reading universal stamps: {e}")
+    return [dict(s) for s in UNIVERSAL_STAMPS]
+
+def save_universal_stamps(stamps: List[Dict[str, Any]]):
+    path = os.path.join(DATA_DIR, "stamps.json")
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(stamps, f, indent=2)
+
 def load_stamps(workspace: str = "default") -> List[Dict[str, Any]]:
-    # Universal stamps are provided by default for all workspaces so every colleague has standard conventions
+    if workspace in ["admin", "default", "shajjad"]:
+        return load_universal_stamps()
     stamps = load_json('stamps.json', None, workspace=workspace)
     if stamps is None or len(stamps) == 0:
-        return [dict(s) for s in UNIVERSAL_STAMPS]
+        return load_universal_stamps()
     return stamps
 
 def load_authorizers(workspace: str = "default") -> List[Dict[str, Any]]:
@@ -338,6 +356,8 @@ async def login_post(request: Request):
         path="/"
     )
     user_ws = user.get("workspace", user.get("username", "default"))
+    if user.get("role") == "admin" or user.get("username") in ["shajjad", "admin"]:
+        user_ws = "admin"
     response.set_cookie(
         key="ow_active_ws",
         value=user_ws,
@@ -370,18 +390,47 @@ async def dashboard_view(
     is_admin = bool(u and (u.get("role") == "admin" or current_username in ["shajjad", "admin"]))
     
     active_ws = get_current_workspace(request)
-    if is_admin and ws and ws.strip():
-        active_ws = ws.strip()
-        
+    if is_admin:
+        if ws and ws.strip():
+            active_ws = ws.strip()
+        else:
+            cookie_ws = request.cookies.get("ow_active_ws")
+            if cookie_ws and cookie_ws.strip() and cookie_ws.strip() not in ["default", "shajjad"]:
+                active_ws = cookie_ws.strip()
+            else:
+                active_ws = "admin"
+    else:
+        active_ws = u.get("workspace", current_username) if u else "default"
+
+    # ================= MASTER ADMIN PORTAL VIEW (ZERO DEPARTMENTAL CLUTTER) =================
+    if is_admin and active_ws in ["admin", "default", "shajjad"]:
+        user_display_name = u.get("name", current_username) if u else current_username
+        response = templates.TemplateResponse(
+            request=request,
+            name="admin.html",
+            context={
+                "request": request,
+                "current_user": current_username,
+                "current_user_name": user_display_name,
+                "is_admin": True,
+                "all_users": list_users_safe(),
+                "workspaces_list": list_workspaces(),
+                "universal_stamps": load_universal_stamps()
+            }
+        )
+        response.set_cookie(key="ow_active_ws", value="admin", max_age=30*86400, httponly=False, samesite="lax", path="/")
+        return response
+
+    # ================= DEPARTMENT TIMESHEET VIEW =================
     data = get_month_data(year, month, workspace=active_ws)
     month_names = {i: calendar.month_name[i] for i in range(1, 13)}
     
     user_display_name = u.get("name", current_username) if u else current_username
-    user_dept = u.get("department", "Hotel Engineering") if u else "Hotel Engineering"
+    user_dept = u.get("department", "Department") if u else "Department"
     
     ws_list = list_workspaces() if is_admin else []
     active_ws_info = next((w for w in ws_list if w["id"] == active_ws), None)
-    active_ws_title = active_ws_info["department"] if active_ws_info else user_dept
+    active_ws_title = active_ws_info["department"] if active_ws_info else (user_dept if not is_admin else active_ws)
     
     response = templates.TemplateResponse(
         request=request,
@@ -793,6 +842,71 @@ async def switch_workspace_endpoint(request: Request, payload: Dict[str, str] = 
         path="/"
     )
     return response
+
+@app.post("/api/users/{target_username}/password")
+async def reset_user_password_endpoint(request: Request, target_username: str, payload: Dict[str, str] = Body(...)):
+    require_admin(request)
+    new_pw = payload.get("password", "").strip()
+    if not new_pw:
+        raise HTTPException(status_code=400, detail="Password is required")
+    create_or_update_user(target_username, password=new_pw)
+    return {"success": True, "message": f"Password for {target_username} updated successfully"}
+
+# ================= Master Admin Universal Stamps Standard Endpoints =================
+
+@app.get("/api/admin/stamps")
+async def get_admin_universal_stamps(request: Request):
+    require_admin(request)
+    return {"success": True, "stamps": load_universal_stamps()}
+
+@app.post("/api/admin/stamps")
+async def save_admin_universal_stamp(request: Request, stamp: Dict[str, Any] = Body(...)):
+    require_admin(request)
+    code = str(stamp.get("code", "")).strip().upper()
+    if not code:
+        raise HTTPException(status_code=400, detail="Stamp code required")
+    name = str(stamp.get("name", code)).strip()
+    try:
+        hours = float(stamp.get("hours", 0))
+    except (ValueError, TypeError):
+        hours = 0.0
+    bg_color = stamp.get("bg_color", "#F1F5F9")
+    text_color = stamp.get("text_color", "#334155")
+    
+    stamps = load_universal_stamps()
+    new_stamp = {
+        "code": code,
+        "name": name,
+        "hours": int(hours) if hours.is_integer() else hours,
+        "bg_color": bg_color,
+        "text_color": text_color
+    }
+    updated = False
+    for i, s in enumerate(stamps):
+        if str(s.get("code", "")).strip().upper() == code:
+            stamps[i] = new_stamp
+            updated = True
+            break
+    if not updated:
+        stamps.append(new_stamp)
+    save_universal_stamps(stamps)
+    return {"success": True, "stamps": stamps}
+
+@app.delete("/api/admin/stamps/{code}")
+async def delete_admin_universal_stamp(request: Request, code: str):
+    require_admin(request)
+    code = code.strip().upper()
+    stamps = load_universal_stamps()
+    stamps = [s for s in stamps if str(s.get("code", "")).strip().upper() != code]
+    save_universal_stamps(stamps)
+    return {"success": True, "stamps": stamps}
+
+@app.post("/api/admin/stamps/reset")
+async def reset_admin_universal_stamps(request: Request):
+    require_admin(request)
+    stamps = [dict(s) for s in UNIVERSAL_STAMPS]
+    save_universal_stamps(stamps)
+    return {"success": True, "stamps": stamps}
 
 # ================= Export Endpoints =================
 

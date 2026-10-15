@@ -1,0 +1,900 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Master Admin Portal — officework</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #4f46e5;
+      --primary-hover: #4338ca;
+      --success: #059669;
+      --warning: #d97706;
+      --danger: #dc2626;
+      --bg: #f8fafc;
+      --card-bg: #ffffff;
+      --border: #e2e8f0;
+      --text-main: #0f172a;
+      --text-muted: #64748b;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Inter', -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text-main);
+      padding: 24px;
+      line-height: 1.5;
+    }
+    .container {
+      max-width: 1440px;
+      margin: 0 auto;
+    }
+    header.top-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: var(--card-bg);
+      padding: 18px 24px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+    .brand-section {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .brand-icon {
+      width: 44px;
+      height: 44px;
+      background: linear-gradient(135deg, #6366f1, #4338ca);
+      color: white;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 20px;
+      box-shadow: 0 2px 6px rgba(79, 70, 229, 0.3);
+    }
+    .brand h1 {
+      font-size: 20px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .badge-master {
+      background: #ede9fe;
+      color: #6d28d9;
+      font-size: 11px;
+      font-weight: 800;
+      padding: 3px 8px;
+      border-radius: 6px;
+      letter-spacing: 0.5px;
+    }
+    .brand p {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .user-pill {
+      font-size: 13px;
+      font-weight: 700;
+      color: #334155;
+      background: #f1f5f9;
+      border: 1px solid #cbd5e1;
+      padding: 6px 12px;
+      border-radius: 8px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 15px;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 13px;
+      cursor: pointer;
+      border: none;
+      text-decoration: none;
+      transition: all 0.15s ease;
+      font-family: inherit;
+    }
+    .btn-primary { background: var(--primary); color: white; }
+    .btn-primary:hover { background: var(--primary-hover); }
+    .btn-outline {
+      background: white;
+      border: 1px solid var(--border);
+      color: var(--text-main);
+    }
+    .btn-outline:hover { background: #f1f5f9; }
+    .btn-danger { background: var(--danger); color: white; }
+    .btn-danger:hover { background: #b91c1c; }
+    .btn-sm { padding: 5px 9px; font-size: 12px; border-radius: 6px; }
+
+    /* Top Stats Bar */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .stat-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+    }
+    .stat-icon {
+      width: 46px;
+      height: 46px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+    }
+    .stat-val {
+      font-size: 24px;
+      font-weight: 800;
+      line-height: 1.1;
+      color: var(--text-main);
+    }
+    .stat-label {
+      font-size: 12px;
+      color: var(--text-muted);
+      font-weight: 600;
+    }
+
+    /* Main Grid */
+    .portal-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      margin-bottom: 24px;
+    }
+    @media (max-width: 1024px) {
+      .portal-grid { grid-template-columns: 1fr; }
+    }
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 22px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    }
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1.5px solid #f1f5f9;
+    }
+    .card-title {
+      font-size: 16px;
+      font-weight: 800;
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .card-subtitle {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    /* Form Styles */
+    .form-group {
+      margin-bottom: 14px;
+    }
+    .form-group label {
+      display: block;
+      font-size: 12px;
+      font-weight: 700;
+      color: #334155;
+      margin-bottom: 5px;
+    }
+    .form-control {
+      width: 100%;
+      padding: 9px 12px;
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-main);
+      transition: border 0.15s ease;
+      background: #ffffff;
+    }
+    .form-control:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.12);
+    }
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    /* Item Card */
+    .item-card {
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 14px;
+      margin-bottom: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      transition: all 0.15s ease;
+    }
+    .item-card:hover {
+      border-color: #cbd5e1;
+      background: #ffffff;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.03);
+    }
+    .item-card-info h4 {
+      font-size: 14px;
+      font-weight: 700;
+      margin-bottom: 2px;
+      color: #0f172a;
+    }
+    .item-card-info p {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+    .badge-dept {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 800;
+      padding: 2px 8px;
+      border-radius: 4px;
+      background: #dbeafe;
+      color: #1e40af;
+      margin-left: 6px;
+    }
+    .badge-active {
+      background: #dcfce7;
+      color: #166534;
+      font-size: 11px;
+      font-weight: 800;
+      padding: 2px 7px;
+      border-radius: 4px;
+    }
+    .badge-inactive {
+      background: #fee2e2;
+      color: #991b1b;
+      font-size: 11px;
+      font-weight: 800;
+      padding: 2px 7px;
+      border-radius: 4px;
+    }
+
+    .tag-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 38px;
+      height: 28px;
+      padding: 0 8px;
+      border-radius: 6px;
+      font-weight: 800;
+      font-size: 12px;
+      letter-spacing: 0.5px;
+      border: 1px solid rgba(0,0,0,0.08);
+    }
+
+    /* Banner */
+    .info-banner {
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      border-radius: 8px;
+      padding: 12px 16px;
+      margin-bottom: 16px;
+      font-size: 12.5px;
+      color: #1e40af;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    /* Toast */
+    #portalToast {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 9999;
+      padding: 12px 18px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 700;
+      display: none;
+      align-items: center;
+      gap: 10px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      transition: all 0.2s ease;
+    }
+  </style>
+</head>
+<body>
+  <div id="portalToast"></div>
+
+  <div class="container">
+    <!-- Top Header -->
+    <header class="top-header">
+      <div class="brand-section">
+        <div class="brand">
+          <div class="brand-icon">👑</div>
+          <div>
+            <h1>officework <span class="badge-master">MASTER ADMIN PORTAL</span></h1>
+            <p>Company User Provisioning & Universal Work Stamps Standard</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="header-actions">
+        <span class="user-pill">
+          👤 {{ current_user_name }} <strong style="color: #6d28d9;">(Master Admin)</strong>
+        </span>
+        <a href="/logout" class="btn btn-outline btn-sm" style="color: #dc2626; border-color: #fca5a5;">
+          🚪 Sign Out
+        </a>
+      </div>
+    </header>
+
+    <!-- Top Metrics Overview -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-icon" style="background: #ede9fe; color: #6d28d9;">👥</div>
+        <div>
+          <div class="stat-val" id="statUserCount">{{ all_users|length }}</div>
+          <div class="stat-label">Colleague Accounts</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon" style="background: #e0f2fe; color: #0284c7;">🏢</div>
+        <div>
+          <div class="stat-val" id="statDeptCount">{{ workspaces_list|length }}</div>
+          <div class="stat-label">Department Workspaces</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon" style="background: #fef3c7; color: #b45309;">🏷️</div>
+        <div>
+          <div class="stat-val" id="statStampCount">{{ universal_stamps|length }}</div>
+          <div class="stat-label">Universal Work Stamps</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon" style="background: #dcfce7; color: #166534;">🛡️</div>
+        <div>
+          <div class="stat-val" style="font-size: 16px; color: #166534; font-weight: 800;">Zero Department Clutter</div>
+          <div class="stat-label">Master Admin Isolated Mode</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Portal Grid -->
+    <div class="portal-grid">
+      
+      <!-- ================= COLUMN 1: USERS & DEPARTMENTS ================= -->
+      <div>
+        <div class="card" style="margin-bottom: 24px;">
+          <div class="card-header">
+            <div>
+              <h2 class="card-title">➕ Create Colleague Account</h2>
+              <p class="card-subtitle">Colleagues receive their own isolated department panel with a clean blank slate.</p>
+            </div>
+          </div>
+
+          <form id="formCreateUser" onsubmit="handleCreateUser(event)">
+            <div class="form-row">
+              <div class="form-group">
+                <label>Login Username *</label>
+                <input type="text" id="newUsername" class="form-control" placeholder="e.g. mahabubalam" required autocomplete="off">
+              </div>
+              <div class="form-group">
+                <label>Colleague Full Name</label>
+                <input type="text" id="newName" class="form-control" placeholder="e.g. Mahabub Alam" autocomplete="off">
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label>Department Name *</label>
+                <input type="text" id="newDept" class="form-control" placeholder="e.g. MEA HK, Front Office, Finance" required autocomplete="off">
+              </div>
+              <div class="form-group">
+                <label>Password *</label>
+                <input type="text" id="newPassword" class="form-control" placeholder="e.g. 12345678" required autocomplete="new-password">
+              </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center; padding: 10px; font-weight: 700;">
+              ➕ Create User & Blank Department Workspace
+            </button>
+          </form>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <h2 class="card-title">👥 Registered Colleague Accounts (<span id="userListCount">{{ all_users|length }}</span>)</h2>
+              <p class="card-subtitle">Manage login access, reset passwords, or inspect department timesheets.</p>
+            </div>
+          </div>
+
+          <div id="usersContainer">
+            {% for u in all_users %}
+            <div class="item-card" id="userCard-{{ u.username }}">
+              <div class="item-card-info">
+                <h4>
+                  {{ u.name or u.username }}
+                  <span class="badge-dept">{{ u.department or 'General' }}</span>
+                </h4>
+                <p>
+                  Username: <strong style="color: #0f172a;">{{ u.username }}</strong> |
+                  Role: <strong>{{ u.role|upper }}</strong> |
+                  Status: <span class="{{ 'badge-active' if u.is_active else 'badge-inactive' }}">{{ 'Active' if u.is_active else 'Disabled' }}</span>
+                </p>
+              </div>
+              <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
+                {% if u.username not in ['shajjad', 'admin'] %}
+                  <a href="/?ws={{ u.username }}" class="btn btn-outline btn-sm" style="color: #4f46e5; border-color: #c7d2fe; font-weight: 700;" title="Inspect their attendance sheet">
+                    👁️ Inspect Timesheet
+                  </a>
+                  <button type="button" class="btn btn-outline btn-sm" onclick="promptResetPassword('{{ u.username }}')" title="Reset Password">
+                    🔑 Password
+                  </button>
+                  <button type="button" class="btn btn-outline btn-sm" onclick="toggleUserActive('{{ u.username }}')">
+                    {{ '✕ Disable' if u.is_active else '✓ Enable' }}
+                  </button>
+                  <button type="button" class="btn btn-danger btn-sm" onclick="deleteUser('{{ u.username }}')">
+                    🗑️
+                  </button>
+                {% else %}
+                  <span style="font-size: 11px; font-weight: 800; color: #6d28d9; background: #ede9fe; padding: 4px 8px; border-radius: 6px;">MASTER ADMIN</span>
+                {% endif %}
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+
+      <!-- ================= COLUMN 2: UNIVERSAL STAMPS ================= -->
+      <div>
+        <div class="card" style="margin-bottom: 24px;">
+          <div class="card-header">
+            <div>
+              <h2 class="card-title">🏷️ Universal Work Stamps Standard</h2>
+              <p class="card-subtitle">Company-wide standard codes, hours, and colors (8, WO, PH, SL, AL, etc.)</p>
+            </div>
+            <button type="button" class="btn btn-outline btn-sm" onclick="resetUniversalStampsToFactory()" style="font-size: 11px; color: #4f46e5; border-color: #c7d2fe;">
+              🔄 Restore Factory Presets
+            </button>
+          </div>
+
+          <div class="info-banner">
+            <span>🌐 <strong>Company Standard:</strong> Any stamps defined here automatically define the universal standard codes and colors for all colleague departments, ensuring timesheets are uniform across the company.</span>
+          </div>
+
+          <!-- Add / Edit Universal Stamp Form -->
+          <form id="formUniversalStamp" onsubmit="handleSaveUniversalStamp(event)">
+            <input type="hidden" id="stampEditMode" value="0">
+            <div class="form-row">
+              <div class="form-group">
+                <label>Stamp Symbol / Code *</label>
+                <input type="text" id="stampCode" class="form-control" placeholder="e.g. 8, WO, PH, SL, AL, HD" required autocomplete="off">
+              </div>
+              <div class="form-group">
+                <label>Assigned Paid Hours *</label>
+                <input type="number" id="stampHours" class="form-control" value="8" step="0.5" required>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label>Description Name</label>
+              <input type="text" id="stampName" class="form-control" placeholder="e.g. Regular Work, Weekly Off, Public Holiday" autocomplete="off">
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label>Badge Background Color</label>
+                <input type="color" id="stampBg" class="form-control" value="#F1F5F9" style="height: 40px; padding: 2px;">
+              </div>
+              <div class="form-group">
+                <label>Badge Text Color</label>
+                <input type="color" id="stampTxt" class="form-control" value="#334155" style="height: 40px; padding: 2px;">
+              </div>
+            </div>
+
+            <!-- Quick Palette Presets -->
+            <div style="margin-bottom: 14px;">
+              <label style="font-size: 11px; font-weight: 700; color: #64748b; margin-bottom: 5px; display: block;">Quick Color Palette Presets</label>
+              <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+                <button type="button" class="btn btn-outline btn-sm" onclick="applyPreset('#F1F5F9', '#334155')" style="font-size: 11px; padding: 3px 8px; background: #F1F5F9; color: #334155; border: 1px solid #cbd5e1;">8 (Slate)</button>
+                <button type="button" class="btn btn-outline btn-sm" onclick="applyPreset('#FEF3C7', '#B45309')" style="font-size: 11px; padding: 3px 8px; background: #FEF3C7; color: #B45309; border: 1px solid #fde68a;">WO (Amber)</button>
+                <button type="button" class="btn btn-outline btn-sm" onclick="applyPreset('#D1FAE5', '#065F46')" style="font-size: 11px; padding: 3px 8px; background: #D1FAE5; color: #065F46; border: 1px solid #a7f3d0;">PH (Emerald)</button>
+                <button type="button" class="btn btn-outline btn-sm" onclick="applyPreset('#E0F2FE', '#0369A1')" style="font-size: 11px; padding: 3px 8px; background: #E0F2FE; color: #0369A1; border: 1px solid #bae6fd;">SL (Sky Blue)</button>
+                <button type="button" class="btn btn-outline btn-sm" onclick="applyPreset('#E0E7FF', '#3730A3')" style="font-size: 11px; padding: 3px 8px; background: #E0E7FF; color: #3730A3; border: 1px solid #c7d2fe;">AL (Indigo)</button>
+                <button type="button" class="btn btn-outline btn-sm" onclick="applyPreset('#FEE2E2', '#991B1B')" style="font-size: 11px; padding: 3px 8px; background: #FEE2E2; color: #991B1B; border: 1px solid #fecaca;">A (Soft Red)</button>
+                <button type="button" class="btn btn-outline btn-sm" onclick="applyPreset('#FFE4E6', '#9F1239')" style="font-size: 11px; padding: 3px 8px; background: #FFE4E6; color: #9F1239; border: 1px solid #fecdd3;">V (Rose)</button>
+              </div>
+            </div>
+
+            <div style="display: flex; gap: 8px;">
+              <button type="submit" id="btnSaveUniversalStamp" class="btn btn-primary" style="flex: 1; justify-content: center; padding: 10px; font-weight: 700;">
+                💾 Save Universal Stamp
+              </button>
+              <button type="button" id="btnCancelEditStamp" class="btn btn-outline" style="display: none; padding: 10px;" onclick="cancelEditUniversalStamp()">
+                Cancel
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <h2 class="card-title">🏷️ Active Universal Stamps (<span id="stampListCount">{{ universal_stamps|length }}</span>)</h2>
+              <p class="card-subtitle">These stamps are synced to all department timesheets.</p>
+            </div>
+          </div>
+
+          <div id="stampsContainer">
+            {% for s in universal_stamps %}
+            <div class="item-card" id="stampCard-{{ s.code }}">
+              <div class="item-card-info" style="display: flex; align-items: center; gap: 12px;">
+                <span class="tag-badge" style="background: {{ s.bg_color }}; color: {{ s.text_color }};">
+                  {{ s.code }}
+                </span>
+                <div>
+                  <h4>{{ s.name }}</h4>
+                  <p>Assigned Hours: <strong style="color: #0284c7;">{{ s.hours }}h</strong> | Colors: <span style="font-family: monospace;">{{ s.bg_color }} / {{ s.text_color }}</span></p>
+                </div>
+              </div>
+              <div style="display: flex; gap: 6px;">
+                <button type="button" class="btn btn-outline btn-sm" onclick="editUniversalStamp('{{ s.code }}', '{{ s.name }}', {{ s.hours }}, '{{ s.bg_color }}', '{{ s.text_color }}')">
+                  ✏️ Edit
+                </button>
+                <button type="button" class="btn btn-danger btn-sm" onclick="deleteUniversalStamp('{{ s.code }}')">
+                  🗑️
+                </button>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Department Workspaces Inspector Section -->
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <h2 class="card-title">🏢 Registered Department Workspaces ({{ workspaces_list|length }})</h2>
+          <p class="card-subtitle">Jump into any department workspace to inspect their monthly attendance timesheet or help with setup.</p>
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 14px;">
+        {% for ws in workspaces_list %}
+        <div class="item-card" style="padding: 14px 16px;">
+          <div>
+            <h4 style="font-size: 15px; margin-bottom: 2px;">🏢 {{ ws.department }}</h4>
+            <p style="font-size: 12px; color: var(--text-muted);">Manager Account: <strong style="color: #0f172a;">{{ ws.name or ws.id }}</strong> (ID: <code>{{ ws.id }}</code>)</p>
+          </div>
+          <a href="/?ws={{ ws.id }}" class="btn btn-outline btn-sm" style="color: #4f46e5; border-color: #c7d2fe; font-weight: 700; white-space: nowrap;">
+            👁️ Inspect Timesheet
+          </a>
+        </div>
+        {% else %}
+        <div style="grid-column: 1 / -1; text-align: center; padding: 24px; color: var(--text-muted); background: #f8fafc; border: 1.5px dashed #cbd5e1; border-radius: 8px;">
+          No department workspaces created yet. Use the Create Colleague Account form above to add your first department!
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    function showToast(msg, type = 'success') {
+      const toast = document.getElementById('portalToast');
+      toast.style.background = (type === 'success') ? '#dcfce7' : '#fee2e2';
+      toast.style.color = (type === 'success') ? '#166534' : '#991b1b';
+      toast.style.border = (type === 'success') ? '1px solid #bbf7d0' : '1px solid #fecaca';
+      toast.innerHTML = `<span>${msg}</span><button type="button" onclick="this.parentElement.style.display='none'" style="background:none; border:none; color:inherit; font-weight:800; cursor:pointer; margin-left:10px;">✕</button>`;
+      toast.style.display = 'flex';
+      clearTimeout(toast._timer);
+      toast._timer = setTimeout(() => { toast.style.display = 'none'; }, 3500);
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    /* ================= User Management Functions ================= */
+    async function handleCreateUser(e) {
+      e.preventDefault();
+      const username = document.getElementById('newUsername').value.trim();
+      const name = document.getElementById('newName').value.trim();
+      const department = document.getElementById('newDept').value.trim();
+      const password = document.getElementById('newPassword').value.trim();
+
+      if (!username || !department || !password) {
+        showToast('Please fill in username, department, and password', 'error');
+        return;
+      }
+
+      try {
+        const res = await fetch('/api/users', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, name, department, password, role: 'user' })
+        });
+        const data = await res.json();
+        if (data.success && data.users) {
+          renderUsers(data.users);
+          document.getElementById('formCreateUser').reset();
+          showToast(`✓ User "${username}" & blank department "${department}" created!`);
+          if (data.workspaces) {
+            document.getElementById('statDeptCount').innerText = data.workspaces.length;
+          }
+        } else {
+          showToast('Error: ' + (data.detail || 'Could not create user'), 'error');
+        }
+      } catch (err) {
+        showToast('Network error: ' + err, 'error');
+      }
+    }
+
+    function renderUsers(users) {
+      const container = document.getElementById('usersContainer');
+      if (!container) return;
+      document.getElementById('statUserCount').innerText = users.length;
+      document.getElementById('userListCount').innerText = users.length;
+
+      container.innerHTML = users.map(u => `
+        <div class="item-card" id="userCard-${escapeHtml(u.username)}">
+          <div class="item-card-info">
+            <h4>
+              ${escapeHtml(u.name || u.username)}
+              <span class="badge-dept">${escapeHtml(u.department || 'General')}</span>
+            </h4>
+            <p>
+              Username: <strong style="color: #0f172a;">${escapeHtml(u.username)}</strong> |
+              Role: <strong>${escapeHtml(u.role ? u.role.toUpperCase() : 'USER')}</strong> |
+              Status: <span class="${u.is_active ? 'badge-active' : 'badge-inactive'}">${u.is_active ? 'Active' : 'Disabled'}</span>
+            </p>
+          </div>
+          <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
+            ${(u.username !== 'shajjad' && u.username !== 'admin') ? `
+              <a href="/?ws=${encodeURIComponent(u.username)}" class="btn btn-outline btn-sm" style="color: #4f46e5; border-color: #c7d2fe; font-weight: 700;" title="Inspect their attendance sheet">
+                👁️ Inspect Timesheet
+              </a>
+              <button type="button" class="btn btn-outline btn-sm" onclick="promptResetPassword('${escapeHtml(u.username)}')" title="Reset Password">
+                🔑 Password
+              </button>
+              <button type="button" class="btn btn-outline btn-sm" onclick="toggleUserActive('${escapeHtml(u.username)}')">
+                ${u.is_active ? '✕ Disable' : '✓ Enable'}
+              </button>
+              <button type="button" class="btn btn-danger btn-sm" onclick="deleteUser('${escapeHtml(u.username)}')">
+                🗑️
+              </button>
+            ` : '<span style="font-size: 11px; font-weight: 800; color: #6d28d9; background: #ede9fe; padding: 4px 8px; border-radius: 6px;">MASTER ADMIN</span>'}
+          </div>
+        </div>
+      `).join('');
+    }
+
+    async function promptResetPassword(username) {
+      const newPw = prompt(`Enter new password for colleague account "${username}":`);
+      if (!newPw || !newPw.trim()) return;
+
+      try {
+        const res = await fetch(`/api/users/${encodeURIComponent(username)}/password`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ password: newPw.trim() })
+        });
+        const data = await res.json();
+        if (data.success) {
+          showToast(`✓ Password for "${username}" updated successfully!`);
+        } else {
+          showToast('Error: ' + (data.detail || 'Could not update password'), 'error');
+        }
+      } catch (err) {
+        showToast('Network error: ' + err, 'error');
+      }
+    }
+
+    async function toggleUserActive(username) {
+      try {
+        const res = await fetch(`/api/users/${encodeURIComponent(username)}/toggle`, { method: 'PATCH' });
+        const data = await res.json();
+        if (data.success && data.users) {
+          renderUsers(data.users);
+          showToast(`✓ Status updated for "${username}"`);
+        }
+      } catch (err) {
+        showToast('Error: ' + err, 'error');
+      }
+    }
+
+    async function deleteUser(username) {
+      if (!confirm(`Are you sure you want to delete user account "${username}" and all their data? This action cannot be undone.`)) return;
+
+      try {
+        const res = await fetch(`/api/users/${encodeURIComponent(username)}`, { method: 'DELETE' });
+        const data = await res.json();
+        if (data.success && data.users) {
+          renderUsers(data.users);
+          showToast(`✓ Account "${username}" deleted`);
+          if (data.workspaces) {
+            document.getElementById('statDeptCount').innerText = data.workspaces.length;
+          }
+        }
+      } catch (err) {
+        showToast('Error: ' + err, 'error');
+      }
+    }
+
+    /* ================= Universal Stamps Management ================= */
+    function applyPreset(bg, txt) {
+      document.getElementById('stampBg').value = bg;
+      document.getElementById('stampTxt').value = txt;
+    }
+
+    function editUniversalStamp(code, name, hours, bg, txt) {
+      document.getElementById('stampCode').value = code;
+      document.getElementById('stampCode').readOnly = true;
+      document.getElementById('stampHours').value = hours;
+      document.getElementById('stampName').value = name;
+      document.getElementById('stampBg').value = bg;
+      document.getElementById('stampTxt').value = txt;
+      document.getElementById('stampEditMode').value = "1";
+      document.getElementById('btnSaveUniversalStamp').innerText = '💾 Update Universal Stamp';
+      document.getElementById('btnCancelEditStamp').style.display = 'inline-flex';
+      document.getElementById('formUniversalStamp').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function cancelEditUniversalStamp() {
+      document.getElementById('stampCode').value = '';
+      document.getElementById('stampCode').readOnly = false;
+      document.getElementById('stampHours').value = '8';
+      document.getElementById('stampName').value = '';
+      document.getElementById('stampBg').value = '#F1F5F9';
+      document.getElementById('stampTxt').value = '#334155';
+      document.getElementById('stampEditMode').value = "0";
+      document.getElementById('btnSaveUniversalStamp').innerText = '💾 Save Universal Stamp';
+      document.getElementById('btnCancelEditStamp').style.display = 'none';
+    }
+
+    async function handleSaveUniversalStamp(e) {
+      e.preventDefault();
+      const code = document.getElementById('stampCode').value.trim().toUpperCase();
+      const hours = parseFloat(document.getElementById('stampHours').value) || 0;
+      const name = document.getElementById('stampName').value.trim() || code;
+      const bg_color = document.getElementById('stampBg').value;
+      const text_color = document.getElementById('stampTxt').value;
+
+      if (!code) {
+        showToast('Stamp code is required', 'error');
+        return;
+      }
+
+      try {
+        const res = await fetch('/api/admin/stamps', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ code, hours, name, bg_color, text_color })
+        });
+        const data = await res.json();
+        if (data.success && data.stamps) {
+          renderUniversalStamps(data.stamps);
+          cancelEditUniversalStamp();
+          showToast(`✓ Universal stamp "${code}" (${hours}h) saved!`);
+        } else {
+          showToast('Error: ' + (data.detail || 'Could not save stamp'), 'error');
+        }
+      } catch (err) {
+        showToast('Network error: ' + err, 'error');
+      }
+    }
+
+    async function deleteUniversalStamp(code) {
+      if (!confirm(`Delete universal stamp "${code}"?`)) return;
+      try {
+        const res = await fetch(`/api/admin/stamps/${encodeURIComponent(code)}`, { method: 'DELETE' });
+        const data = await res.json();
+        if (data.success && data.stamps) {
+          renderUniversalStamps(data.stamps);
+          showToast(`✓ Universal stamp "${code}" deleted`);
+        }
+      } catch (err) {
+        showToast('Error: ' + err, 'error');
+      }
+    }
+
+    async function resetUniversalStampsToFactory() {
+      if (!confirm('Reset universal stamps to company standard presets (8, WO, PH, SL, AL, A, V)?')) return;
+      try {
+        const res = await fetch('/api/admin/stamps/reset', { method: 'POST' });
+        const data = await res.json();
+        if (data.success && data.stamps) {
+          renderUniversalStamps(data.stamps);
+          cancelEditUniversalStamp();
+          showToast('✓ Universal stamps restored to company factory standards!');
+        }
+      } catch (err) {
+        showToast('Error: ' + err, 'error');
+      }
+    }
+
+    function renderUniversalStamps(stamps) {
+      const container = document.getElementById('stampsContainer');
+      if (!container) return;
+      document.getElementById('statStampCount').innerText = stamps.length;
+      document.getElementById('stampListCount').innerText = stamps.length;
+
+      container.innerHTML = stamps.map(s => `
+        <div class="item-card" id="stampCard-${escapeHtml(s.code)}">
+          <div class="item-card-info" style="display: flex; align-items: center; gap: 12px;">
+            <span class="tag-badge" style="background: ${s.bg_color}; color: ${s.text_color};">
+              ${escapeHtml(s.code)}
+            </span>
+            <div>
+              <h4>${escapeHtml(s.name)}</h4>
+              <p>Assigned Hours: <strong style="color: #0284c7;">${s.hours}h</strong> | Colors: <span style="font-family: monospace;">${s.bg_color} / ${s.text_color}</span></p>
+            </div>
+          </div>
+          <div style="display: flex; gap: 6px;">
+            <button type="button" class="btn btn-outline btn-sm" onclick="editUniversalStamp('${escapeHtml(s.code)}', '${escapeHtml(s.name)}', ${s.hours}, '${s.bg_color}', '${s.text_color}')">
+              ✏️ Edit
+            </button>
+            <button type="button" class="btn btn-danger btn-sm" onclick="deleteUniversalStamp('${escapeHtml(s.code)}')">
+              🗑️
+            </button>
+          </div>
+        </div>
+      `).join('');
+    }
+  </script>
+</body>
+</html>

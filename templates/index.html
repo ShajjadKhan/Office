@@ -798,7 +798,7 @@
       <div class="brand-section">
         <button class="btn-drawer-open" onclick="openDrawer('authorizers')">
           <span>⚙️</span>
-          <span>{% if is_admin %}Manage Master Data{% else %}Department Setup & Data{% endif %}</span>
+          <span>Department Setup & Data</span>
         </button>
         <div class="brand">
           <div class="brand-icon">OW</div>
@@ -822,9 +822,9 @@
             {% endfor %}
           </select>
         </div>
-        <button class="btn btn-outline btn-sm" onclick="openDrawer('master-control')" style="background: #faf5ff; border-color: #ddd6fe; color: #6d28d9; font-weight: 700; padding: 6px 10px;">
-          👑 Master Control
-        </button>
+        <a href="/?ws=admin" class="btn btn-outline btn-sm" style="background: #faf5ff; border-color: #ddd6fe; color: #6d28d9; font-weight: 700; padding: 6px 10px; text-decoration: none;">
+          👑 Master Admin Portal
+        </a>
         {% elif not is_admin %}
         <div style="display: inline-flex; align-items: center; gap: 6px; background: #f0fdf4; border: 1px solid #bbf7d0; padding: 5px 12px; border-radius: 8px;">
           <span style="font-size: 12px; font-weight: 800; color: #166534;">🏢 {{ current_user_dept }}</span>
@@ -855,20 +855,23 @@
       </div>
     </header>
 
-    {% if is_admin and active_workspace != 'default' %}
+    {% if is_admin %}
     <!-- Active Workspace Banner for Admin -->
-    <div style="background: #f5f3ff; border: 1.5px solid #c4b5fd; border-radius: 10px; padding: 12px 18px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
-      <div style="display: flex; align-items: center; gap: 10px;">
-        <span style="font-size: 20px;">🏢</span>
+    <div style="background: linear-gradient(135deg, #312e81, #4338ca); color: white; border-radius: 10px; padding: 14px 20px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; box-shadow: 0 4px 12px rgba(67, 56, 202, 0.2);">
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <span style="font-size: 24px;">👑</span>
         <div>
-          <strong style="color: #6d28d9; font-size: 14px;">Viewing Department Panel: {{ active_workspace_title }}</strong>
-          <span style="font-size: 12px; color: #7c3aed; margin-left: 8px;">(Workspace: <code>{{ active_workspace }}</code>)</span>
-          <p style="font-size: 12px; color: #6b7280; margin: 0;">You are currently inspecting and managing this colleague's department attendance roster, staff, and stamps.</p>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="font-size: 10px; font-weight: 800; background: #818cf8; color: #1e1b4b; padding: 2px 7px; border-radius: 4px; text-transform: uppercase;">ADMIN SUPERVISOR MODE</span>
+            <strong style="color: #ffffff; font-size: 15px;">Inspecting Department Timesheet: {{ active_workspace_title }}</strong>
+            <span style="font-size: 12px; color: #c7d2fe;">(ID: <code>{{ active_workspace }}</code>)</span>
+          </div>
+          <p style="font-size: 12px; color: #c7d2fe; margin: 3px 0 0 0;">You are inspecting this colleague's department timesheet. Return to Master Admin Portal anytime.</p>
         </div>
       </div>
-      <button class="btn btn-outline btn-sm" onclick="switchWorkspace('default')" style="background: #fff; border-color: #a78bfa; color: #6d28d9; font-weight: 700;">
-        🔙 Return to My Hotel Engineering Panel
-      </button>
+      <a href="/?ws=admin" class="btn" style="background: #ffffff; border: none; color: #312e81; font-weight: 800; font-size: 13px; padding: 7px 15px; border-radius: 6px; text-decoration: none;">
+        ⬅️ Return to Master Admin Portal
+      </a>
     </div>
     {% endif %}
 
@@ -1091,9 +1094,6 @@
       <div class="drawer-tab" onclick="switchTab('companies')">🏢 Companies</div>
       <div class="drawer-tab" onclick="switchTab('properties')">🏨 Properties</div>
       <div class="drawer-tab" onclick="switchTab('stamps')">🏷️ Stamps & Hours</div>
-      {% if is_admin %}
-      <div class="drawer-tab" id="drawerTabMaster" style="color: #7c3aed; font-weight: 800; border-left: 1px solid #e2e8f0; background: #faf5ff;" onclick="switchTab('master-control')">👑 Master Control Panel</div>
-      {% endif %}
     </div>
 
     <div class="drawer-body">
@@ -1357,107 +1357,6 @@
           </div>
         </div>
       </div>
-
-      {% if is_admin %}
-      <!-- TAB 6: MASTER CONTROL PANEL -->
-      <div class="tab-content" id="tab-master-control">
-        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; padding-bottom: 10px; border-bottom: 1.5px solid #ede9fe;">
-          <div>
-            <h3 style="font-size: 15px; font-weight: 800; color: #6d28d9; margin-bottom: 3px;">👑 Master Control Panel</h3>
-            <p style="font-size: 12px; color: var(--text-muted);">Create colleague user accounts with isolated blank panels, or manage all department workspaces.</p>
-          </div>
-          <span style="font-size: 11px; font-weight: 800; background: #ede9fe; color: #6d28d9; padding: 4px 10px; border-radius: 6px;">
-            ADMINISTRATOR
-          </span>
-        </div>
-
-        <!-- Add Colleague Form -->
-        <div style="background: #fbfbfe; border: 1.5px solid #ddd6fe; border-radius: 10px; padding: 16px; margin-bottom: 20px;">
-          <h4 style="font-size: 13px; font-weight: 800; color: #5b21b6; margin-bottom: 12px;">➕ Add Department Colleague Account</h4>
-          
-          <div class="form-row">
-            <div class="form-group">
-              <label>Username (Login ID) *</label>
-              <input type="text" id="newUsername" class="form-control" placeholder="e.g. laundry, frontoffice, hk">
-            </div>
-            <div class="form-group">
-              <label>Colleague Full Name *</label>
-              <input type="text" id="newFullName" class="form-control" placeholder="e.g. Ahmed Al-Otaibi">
-            </div>
-          </div>
-
-          <div class="form-row">
-            <div class="form-group">
-              <label>Department Name *</label>
-              <input type="text" id="newDepartment" class="form-control" placeholder="e.g. Laundry, Front Office, Housekeeping">
-            </div>
-            <div class="form-group">
-              <label>Initial Password *</label>
-              <input type="text" id="newPassword" class="form-control" placeholder="Create login password">
-            </div>
-          </div>
-
-          <div class="form-group">
-            <label>Access Role</label>
-            <select id="newRole" class="form-control">
-              <option value="user" selected>Colleague (Private Isolated Department Panel)</option>
-              <option value="admin">Administrator (Master Control Panel Access)</option>
-            </select>
-          </div>
-
-          <button id="btnCreateUser" class="btn btn-primary" onclick="submitCreateUser()" style="width: 100%; justify-content: center; background: #7c3aed; padding: 10px 16px; font-size: 13px;">
-            ✨ Create User & Initialize Blank Workspace
-          </button>
-          <p style="font-size: 11px; color: #6b7280; margin-top: 8px; text-align: center; line-height: 1.4;">
-            ℹ️ New colleagues log in to an independent, blank attendance panel where they create their own staff and stamps. Existing Hotel Engineering data is completely untouched.
-          </p>
-        </div>
-
-        <!-- Registered Colleagues Table -->
-        <div class="item-list">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-            <h4 style="font-size: 13px; font-weight: 800; color: #0f172a;">Registered Users & Department Workspaces</h4>
-            <button class="btn btn-outline btn-sm" onclick="reloadUsersList()" style="font-size: 11px; padding: 3px 8px;">🔄 Refresh List</button>
-          </div>
-          <div id="usersListContainer">
-            {% for u in all_users %}
-            <div class="item-card" style="border-left: 4px solid {% if u.role == 'admin' %}#7c3aed{% else %}#2563eb{% endif %}; margin-bottom: 8px;">
-              <div class="item-card-info">
-                <div style="display: flex; align-items: center; gap: 8px;">
-                  <strong style="font-size: 13px;">{{ u.name }}</strong>
-                  <span style="font-size: 11px; font-family: monospace; color: #64748b;">(@{{ u.username }})</span>
-                  {% if u.role == 'admin' %}
-                    <span style="font-size: 10px; font-weight: 800; background: #ede9fe; color: #6d28d9; padding: 1px 6px; border-radius: 4px;">ADMIN</span>
-                  {% else %}
-                    <span style="font-size: 10px; font-weight: 800; background: #e0f2fe; color: #0369a1; padding: 1px 6px; border-radius: 4px;">COLLEAGUE</span>
-                  {% endif %}
-                  {% if not u.is_active %}
-                    <span style="font-size: 10px; font-weight: 800; background: #fee2e2; color: #991b1b; padding: 1px 6px; border-radius: 4px;">INACTIVE</span>
-                  {% endif %}
-                </div>
-                <p style="margin: 3px 0 0 0; font-size: 12px; color: #475569;">
-                  🏢 <strong>{{ u.department }}</strong> &bull; Workspace: <code style="background: #f1f5f9; padding: 1px 4px; border-radius: 3px;">{{ u.workspace }}</code>
-                </p>
-              </div>
-              <div style="display: flex; gap: 6px; align-items: center;">
-                <button class="btn btn-outline btn-sm" onclick="switchWorkspace('{{ u.workspace }}')" style="font-size: 11px; padding: 4px 8px; font-weight: 700; color: #2563eb; border-color: #bfdbfe;">
-                  👁️ Open Panel
-                </button>
-                {% if u.username not in ['shajjad', 'admin'] %}
-                  <button class="btn btn-outline btn-sm" onclick="toggleUserActive('{{ u.username }}')" style="font-size: 11px; padding: 4px 8px;">
-                    {% if u.is_active %}⏸️ Deactivate{% else %}▶️ Activate{% endif %}
-                  </button>
-                  <button class="btn btn-danger btn-sm" onclick="deleteUserAccount('{{ u.username }}')" style="font-size: 11px; padding: 4px 8px;">
-                    🗑️
-                  </button>
-                {% endif %}
-              </div>
-            </div>
-            {% endfor %}
-          </div>
-        </div>
-      </div>
-      {% endif %}
     </div>
   </div>
 
