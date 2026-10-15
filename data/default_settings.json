@@ -1,0 +1,16 @@
+{
+  "properties": {
+    "RMH": "Riyadh Marriott Hotel",
+    "MEA": "Marriott Executive Apartments"
+  },
+  "department_names": {
+    "0430": "Hotel Engineering"
+  },
+  "default_daily_hours": 8,
+  "default_off_days_count": 4,
+  "signers": {
+    "left": "Department Head",
+    "middle": "Director of Human Resource",
+    "right": "Director of Finance"
+  }
+}
