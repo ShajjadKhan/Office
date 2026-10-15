@@ -8,7 +8,8 @@ CURRENT_MONTH_NUM=$((10#$CURRENT_MONTH))
 echo "=================================================="
 echo " officework - Monthly Salary & Attendance Bundle  "
 echo "=================================================="
-echo "Target Server: http://100.123.152.121:1212"
+echo "Target: https://officework.shajjadkhan.com"
+echo "=================================================="
 echo ""
 
 read -p "Enter Year [$CURRENT_YEAR]: " INPUT_YEAR
@@ -22,7 +23,9 @@ mkdir -p "$DEST_DIR"
 ZIP_FILE="$DEST_DIR/Salary_Package_${YEAR}_${MONTH}.zip"
 
 echo ""
-echo "Downloading monthly package from sk server..."
+echo "Downloading monthly package..."
+# Try public HTTPS first, then fallback to local Tailscale IP
+curl -s -f "https://officework.shajjadkhan.com/api/export/all-zip?year=${YEAR}&month=${MONTH}" -o "$ZIP_FILE" || \
 curl -s -f "http://100.123.152.121:1212/api/export/all-zip?year=${YEAR}&month=${MONTH}" -o "$ZIP_FILE"
 
 if [ $? -eq 0 ] && [ -s "$ZIP_FILE" ]; then
