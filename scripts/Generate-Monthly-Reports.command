@@ -24,9 +24,10 @@ ZIP_FILE="$DEST_DIR/Salary_Package_${YEAR}_${MONTH}.zip"
 
 echo ""
 echo "Downloading monthly package..."
+API_KEY="ow_fbd368333f5c9408e99f9b490914b2de1e8998ea"
 # Try public HTTPS first, then fallback to local Tailscale IP
-curl -s -f "https://officework.shajjadkhan.com/api/export/all-zip?year=${YEAR}&month=${MONTH}" -o "$ZIP_FILE" || \
-curl -s -f "http://100.123.152.121:1212/api/export/all-zip?year=${YEAR}&month=${MONTH}" -o "$ZIP_FILE"
+curl -s -f -H "X-API-Key: $API_KEY" "https://officework.shajjadkhan.com/api/export/all-zip?year=${YEAR}&month=${MONTH}" -o "$ZIP_FILE" || \
+curl -s -f -H "X-API-Key: $API_KEY" "http://100.123.152.121:1212/api/export/all-zip?year=${YEAR}&month=${MONTH}" -o "$ZIP_FILE"
 
 if [ $? -eq 0 ] && [ -s "$ZIP_FILE" ]; then
     echo "✓ Package downloaded successfully!"

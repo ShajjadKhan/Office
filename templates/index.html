@@ -823,6 +823,14 @@
           {% endfor %}
         </select>
         <button class="btn btn-primary" onclick="saveChanges()">💾 Save Month</button>
+        <div style="display: inline-flex; align-items: center; gap: 8px; margin-left: 8px; padding-left: 10px; border-left: 1.5px solid var(--border);">
+          <span style="font-size: 12px; font-weight: 700; color: #334155; background: #f1f5f9; border: 1px solid #cbd5e1; padding: 5px 10px; border-radius: 6px;">
+            👤 {{ current_user }}
+          </span>
+          <a href="/logout" class="btn btn-outline btn-sm" style="padding: 5px 10px; font-size: 12px; font-weight: 700; color: #dc2626; border-color: #fca5a5; text-decoration: none;">
+            🚪 Sign Out
+          </a>
+        </div>
       </div>
     </header>
 

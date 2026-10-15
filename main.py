@@ -3,16 +3,26 @@ import io
 import json
 import calendar
 import zipfile
+import hmac
+from urllib.parse import quote, parse_qs
 from datetime import datetime
 from typing import List, Dict, Any, Optional, Tuple
 from fastapi import FastAPI, Request, Query, Body, HTTPException
-from fastapi.responses import HTMLResponse, JSONResponse, FileResponse
+from fastapi.responses import HTMLResponse, JSONResponse, FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from services.smart_attendance import get_month_info, generate_default_days, calculate_totals
 from services.excel_generator import generate_company_excel, generate_master_excel
 from services.pdf_generator import generate_company_pdf
+from services.auth_service import (
+    authenticate_user,
+    create_session,
+    get_session_user,
+    revoke_session,
+    get_or_create_api_key,
+    COOKIE_NAME
+)
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_DIR = os.path.join(BASE_DIR, 'data')
@@ -23,6 +33,38 @@ os.makedirs(SAVED_DIR, exist_ok=True)
 os.makedirs(EXPORTS_DIR, exist_ok=True)
 
 app = FastAPI(title="officework", description="Monthly Salary & Attendance Formatter")
+
+@app.middleware("http")
+async def auth_middleware(request: Request, call_next):
+    path = request.url.path
+    
+    # Public routes
+    if path in ["/login", "/logout"] or path.startswith("/static"):
+        return await call_next(request)
+        
+    # Check session cookie
+    token = request.cookies.get(COOKIE_NAME)
+    user = get_session_user(token) if token else None
+    
+    # Check API Key (for desktop script & automation)
+    if not user:
+        api_key = request.headers.get("X-API-Key") or request.query_params.get("api_key")
+        if api_key and hmac.compare_digest(api_key, get_or_create_api_key()):
+            user = "api_user"
+            
+    if user:
+        request.state.user = user
+        return await call_next(request)
+        
+    # Unauthenticated
+    if path.startswith("/api/"):
+        return JSONResponse(status_code=401, content={"detail": "Authentication required. Please sign in."})
+        
+    # Redirect to login page
+    next_url = request.url.path
+    if request.url.query:
+        next_url += f"?{request.url.query}"
+    return RedirectResponse(url=f"/login?next={quote(next_url)}", status_code=302)
 
 templates = Jinja2Templates(directory=os.path.join(BASE_DIR, 'templates'))
 static_dir = os.path.join(BASE_DIR, 'static')
@@ -175,6 +217,70 @@ def get_month_data(year: int, month: int):
 
 # ================= Routes & Views =================
 
+@app.get("/login", response_class=HTMLResponse)
+async def login_page(request: Request, next: str = "/"):
+    token = request.cookies.get(COOKIE_NAME)
+    if token and get_session_user(token):
+        return RedirectResponse(url=next or "/", status_code=302)
+    return templates.TemplateResponse(
+        request=request,
+        name="login.html",
+        context={
+            "request": request,
+            "next_url": next or "/",
+            "error": None,
+            "current_year": datetime.now().year
+        }
+    )
+
+@app.post("/login")
+async def login_post(request: Request):
+    body_bytes = await request.body()
+    form_data = parse_qs(body_bytes.decode('utf-8'))
+    username = form_data.get("username", [""])[0].strip()
+    password = form_data.get("password", [""])[0]
+    remember = form_data.get("remember", [""])[0]
+    next_url = form_data.get("next", ["/"])[0]
+    
+    user = authenticate_user(username, password)
+    if not user:
+        return templates.TemplateResponse(
+            request=request,
+            name="login.html",
+            context={
+                "request": request,
+                "next_url": next_url or "/",
+                "username": username,
+                "error": "Invalid username or password. Please try again.",
+                "current_year": datetime.now().year
+            },
+            status_code=401
+        )
+        
+    duration = 30 if remember else 1
+    token = create_session(user["username"], duration_days=duration)
+    
+    target_url = next_url if (next_url and next_url.startswith("/") and not next_url.startswith("//")) else "/"
+    response = RedirectResponse(url=target_url, status_code=302)
+    response.set_cookie(
+        key=COOKIE_NAME,
+        value=token,
+        max_age=duration * 86400,
+        httponly=True,
+        samesite="lax",
+        path="/"
+    )
+    return response
+
+@app.get("/logout")
+async def logout_endpoint(request: Request):
+    token = request.cookies.get(COOKIE_NAME)
+    if token:
+        revoke_session(token)
+    response = RedirectResponse(url="/login", status_code=302)
+    response.delete_cookie(COOKIE_NAME, path="/")
+    return response
+
 @app.get("/", response_class=HTMLResponse)
 async def dashboard_view(
     request: Request,
@@ -189,6 +295,7 @@ async def dashboard_view(
         name="index.html",
         context={
             "request": request,
+            "current_user": getattr(request.state, "user", "User"),
             "current_year": year,
             "current_month": month,
             "month_info": data["month_info"],
