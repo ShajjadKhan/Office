@@ -209,6 +209,12 @@ def init_workspace(workspace: str, department_name: str = "General Department"):
                 }
             }, f, indent=2)
 
+    # Configured Departments list
+    dept_file = os.path.join(ws_dir, "departments.json")
+    if not os.path.exists(dept_file):
+        with open(dept_file, "w", encoding="utf-8") as f:
+            json.dump([{"code": "0430", "name": department_name}], f, indent=2)
+
 def create_or_update_user(
     username: str,
     name: str,

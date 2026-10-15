@@ -1091,7 +1091,8 @@
     <div class="drawer-nav">
       <div class="drawer-tab active" onclick="switchTab('authorizers')">✍️ Signatures</div>
       <div class="drawer-tab" onclick="switchTab('employees')">👥 Staff</div>
-      <div class="drawer-tab" onclick="switchTab('companies')">🏢 Companies</div>
+      <div class="drawer-tab" onclick="switchTab('departments')">🏢 Departments</div>
+      <div class="drawer-tab" onclick="switchTab('companies')">🤝 Companies</div>
       <div class="drawer-tab" onclick="switchTab('properties')">🏨 Properties</div>
       <div class="drawer-tab" onclick="switchTab('stamps')">🏷️ Stamps & Hours</div>
     </div>
@@ -1149,7 +1150,7 @@
       <div class="tab-content" id="tab-employees">
         <h3 style="font-size: 14px; margin-bottom: 6px;">Add / Edit Associate</h3>
 
-        <div class="edit-banner" id="empEditBanner">
+        <div class="edit-banner" id="empEditBanner" style="display: none;">
           <span id="empEditText">Editing Associate</span>
           <button type="button" onclick="cancelEditEmployee()" style="background: none; border: none; color: #0369a1; text-decoration: underline; cursor: pointer; font-weight: 700;">Cancel</button>
         </div>
@@ -1188,8 +1189,15 @@
           </div>
         </div>
         <div class="form-group">
-          <label>Department Code</label>
-          <input type="text" id="empDept" class="form-control" value="0430">
+          <label>Department</label>
+          <select id="empDept" class="form-control">
+            {% if departments|length == 0 %}
+              <option value="0430" selected>0430 (Default)</option>
+            {% endif %}
+            {% for d in departments %}
+              <option value="{{ d.code }}">{{ d.code }} ({{ d.name }})</option>
+            {% endfor %}
+          </select>
         </div>
         <button id="btnSaveEmployee" class="btn btn-primary" onclick="submitEmployee()" style="width: 100%; justify-content: center;">➕ Save Associate</button>
 
@@ -1200,7 +1208,7 @@
             <div class="item-card">
               <div class="item-card-info">
                 <h4>{{ a.name }}</h4>
-                <p>Iqama: {{ a.iqama }} | {{ a.company }} | {{ a.property }}</p>
+                <p>Iqama: {{ a.iqama }} | {{ a.company }} | {{ a.property }}{% if a.department %} | Dept: {{ a.department }}{% endif %}</p>
               </div>
               <div style="display: flex; gap: 5px;">
                 <button class="btn btn-outline btn-sm" onclick="editEmployee({{ a.id }})">✏️ Edit</button>
@@ -1216,7 +1224,52 @@
         </div>
       </div>
 
-      <!-- TAB 3: COMPANIES -->
+      <!-- TAB 3: DEPARTMENTS -->
+      <div class="tab-content" id="tab-departments">
+        <h3 style="font-size: 14px; margin-bottom: 6px;">Add / Edit Department</h3>
+        <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 14px;">Define department codes and names (e.g. 0430 for Engineering, 0431 for Laundry). You can assign staff to any of these departments.</p>
+
+        <div class="edit-banner" id="deptEditBanner" style="display: none;">
+          <span id="deptEditText">Editing Department</span>
+          <button type="button" onclick="cancelEditDepartment()" style="background: none; border: none; color: #0369a1; text-decoration: underline; cursor: pointer; font-weight: 700;">Cancel</button>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group" style="flex: 1;">
+            <label>Department Code</label>
+            <input type="text" id="deptCodeInput" class="form-control" placeholder="e.g. 0430, 0431, HK">
+          </div>
+          <div class="form-group" style="flex: 2;">
+            <label>Department Name</label>
+            <input type="text" id="deptNameInput" class="form-control" placeholder="e.g. Hotel Engineering, Housekeeping">
+          </div>
+        </div>
+        <button id="btnSaveDepartment" class="btn btn-primary" onclick="submitDepartment()" style="width: 100%; justify-content: center;">➕ Save Department</button>
+
+        <div class="item-list">
+          <h4 style="font-size: 13px; margin-bottom: 10px;">Configured Departments ({{ departments|length }})</h4>
+          <div id="departmentsList">
+            {% for d in departments %}
+            <div class="item-card">
+              <div class="item-card-info">
+                <h4>{{ d.code }}</h4>
+                <p>{{ d.name }}</p>
+              </div>
+              <div style="display: flex; gap: 5px;">
+                <button class="btn btn-outline btn-sm" onclick="editDepartment('{{ d.code }}', '{{ d.name|escape }}')">✏️ Edit</button>
+                <button class="btn btn-danger btn-sm" onclick="deleteDepartment('{{ d.code }}')">Delete</button>
+              </div>
+            </div>
+            {% else %}
+            <div style="text-align: center; padding: 22px; color: #64748b; font-size: 13px; background: #f8fafc; border: 1.5px dashed #cbd5e1; border-radius: 8px;">
+              No departments configured yet. Use the form above to add departments.
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 4: COMPANIES -->
       <div class="tab-content" id="tab-companies">
         <h3 style="font-size: 14px; margin-bottom: 12px;">Add Third-Party Buyout Company</h3>
         <div class="form-group">
@@ -1366,6 +1419,9 @@
     let allAuthorizersData = {{ all_authorizers|tojson }};
     let associatesData = {{ associates|tojson }};
     let allAssociatesData = {{ all_associates|tojson }};
+    let companiesData = {{ companies|tojson }};
+    let propertiesData = {{ properties|tojson }};
+    let departmentsData = {{ departments|tojson }};
     let activeStamp = 'TOGGLE';
 
     function getStampInfo(code) {
@@ -1984,7 +2040,7 @@
           <div class="item-card">
             <div class="item-card-info">
               <h4>${escapeHtml(a.name)}</h4>
-              <p>Iqama: ${escapeHtml(a.iqama)} | ${escapeHtml(a.company)} | ${escapeHtml(a.property)}</p>
+              <p>Iqama: ${escapeHtml(a.iqama)} | ${escapeHtml(a.company)} | ${escapeHtml(a.property)}${a.department ? ' | Dept: ' + escapeHtml(a.department) : ''}</p>
             </div>
             <div style="display: flex; gap: 5px;">
               <button class="btn btn-outline btn-sm" onclick="editEmployee(${a.id})">✏️ Edit</button>
@@ -2001,6 +2057,32 @@
       }
 
       cancelEditEmployee();
+    }
+
+    function editEmployee(id) {
+      const emp = allAssociatesData.find(a => a.id === id);
+      if (!emp) return;
+      document.getElementById('empEditId').value = emp.id;
+      document.getElementById('empName').value = emp.name || '';
+      document.getElementById('empIqama').value = emp.iqama || '';
+      if (emp.company) document.getElementById('empCompany').value = emp.company;
+      if (emp.property) document.getElementById('empProperty').value = emp.property;
+      if (emp.department) document.getElementById('empDept').value = emp.department;
+      document.getElementById('empEditText').innerText = 'Editing Associate: "' + emp.name + '"';
+      document.getElementById('empEditBanner').style.display = 'flex';
+      document.getElementById('btnSaveEmployee').innerHTML = '💾 Update Associate';
+      openDrawer('employees');
+      document.getElementById('tab-employees').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function cancelEditEmployee() {
+      document.getElementById('empEditId').value = '';
+      document.getElementById('empName').value = '';
+      document.getElementById('empIqama').value = '';
+      const banner = document.getElementById('empEditBanner');
+      if (banner) banner.style.display = 'none';
+      const btn = document.getElementById('btnSaveEmployee');
+      if (btn) btn.innerHTML = '➕ Save Associate';
     }
 
     async function submitEmployee() {
@@ -2329,6 +2411,111 @@
         if (data.success && data.properties) {
           renderPropertiesUI(data.properties);
           showDrawerToast(`✓ Property "${code}" removed`);
+        }
+      } catch (e) {
+        alert('Error: ' + e);
+      }
+    }
+
+    /* ================= Departments UI & CRUD (Seamless No-Reload) ================= */
+    function renderDepartmentsUI(list) {
+      departmentsData = list || [];
+      const container = document.getElementById('departmentsList');
+      if (!container) return;
+
+      if (!departmentsData.length) {
+        container.innerHTML = `
+          <div style="text-align: center; padding: 22px; color: #64748b; font-size: 13px; background: #f8fafc; border: 1.5px dashed #cbd5e1; border-radius: 8px;">
+            No departments configured yet. Use the form above to add departments.
+          </div>
+        `;
+      } else {
+        container.innerHTML = departmentsData.map(d => `
+          <div class="item-card">
+            <div class="item-card-info">
+              <h4>${escapeHtml(d.code)}</h4>
+              <p>${escapeHtml(d.name)}</p>
+            </div>
+            <div style="display: flex; gap: 5px;">
+              <button class="btn btn-outline btn-sm" onclick="editDepartment('${escapeHtml(d.code)}', '${escapeHtml(d.name)}')">✏️ Edit</button>
+              <button class="btn btn-danger btn-sm" onclick="deleteDepartment('${escapeHtml(d.code)}')">Delete</button>
+            </div>
+          </div>
+        `).join('');
+      }
+
+      const heading = container.previousElementSibling;
+      if (heading && heading.tagName === 'H4') {
+        heading.innerText = `Configured Departments (${departmentsData.length})`;
+      }
+
+      const empDeptSelect = document.getElementById('empDept');
+      if (empDeptSelect) {
+        const curVal = empDeptSelect.value;
+        if (!departmentsData.length) {
+          empDeptSelect.innerHTML = '<option value="0430">0430 (Default)</option>';
+        } else {
+          empDeptSelect.innerHTML = departmentsData.map(d => `<option value="${escapeHtml(d.code)}">${escapeHtml(d.code)} (${escapeHtml(d.name)})</option>`).join('');
+          if (curVal && departmentsData.some(d => d.code === curVal)) {
+            empDeptSelect.value = curVal;
+          }
+        }
+      }
+
+      cancelEditDepartment();
+    }
+
+    function editDepartment(code, name) {
+      document.getElementById('deptCodeInput').value = code;
+      document.getElementById('deptNameInput').value = name;
+      document.getElementById('deptEditText').innerText = 'Editing Department: "' + code + ' - ' + name + '"';
+      document.getElementById('deptEditBanner').style.display = 'flex';
+      document.getElementById('btnSaveDepartment').innerHTML = '💾 Update Department';
+      openDrawer('departments');
+      document.getElementById('tab-departments').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function cancelEditDepartment() {
+      document.getElementById('deptCodeInput').value = '';
+      document.getElementById('deptNameInput').value = '';
+      const banner = document.getElementById('deptEditBanner');
+      if (banner) banner.style.display = 'none';
+      const btn = document.getElementById('btnSaveDepartment');
+      if (btn) btn.innerHTML = '➕ Save Department';
+    }
+
+    async function submitDepartment() {
+      const code = document.getElementById('deptCodeInput').value.trim();
+      const name = document.getElementById('deptNameInput').value.trim();
+      if (!code || !name) { alert('Department Code and Name are required'); return; }
+      try {
+        const res = await fetch('/api/departments', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ code, name })
+        });
+        const data = await res.json();
+        if (data.success && data.departments) {
+          renderDepartmentsUI(data.departments);
+          showDrawerToast(`✓ Department "${code} - ${name}" saved!`);
+        } else {
+          alert('Error: ' + (data.detail || 'Could not save department'));
+        }
+      } catch (e) {
+        alert('Network error: ' + e);
+      }
+    }
+
+    async function deleteDepartment(code) {
+      if (!confirm('Delete department "' + code + '"?')) return;
+      try {
+        const res = await fetch('/api/departments/' + encodeURIComponent(code), { method: 'DELETE' });
+        const data = await res.json();
+        if (data.success && data.departments) {
+          renderDepartmentsUI(data.departments);
+          showDrawerToast(`✓ Department "${code}" removed`);
+        } else {
+          alert('Error: ' + (data.detail || 'Could not delete department'));
         }
       } catch (e) {
         alert('Error: ' + e);

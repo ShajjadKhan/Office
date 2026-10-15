@@ -189,21 +189,44 @@ def load_authorizers(workspace: str = "default") -> List[Dict[str, Any]]:
     ] if workspace in ["default", "shajjad"] else []
     return load_json('authorizers.json', default, workspace=workspace)
 
-def load_settings(workspace: str = "default") -> Dict[str, Any]:
+def load_departments(workspace: str = "default") -> List[Dict[str, str]]:
+    deps = load_json('departments.json', None, workspace=workspace)
+    if deps and isinstance(deps, list) and len(deps) > 0:
+        return deps
     custom = load_json('default_settings.json', None, workspace=workspace)
-    if custom and isinstance(custom, dict):
-        return custom
-    props_list = load_properties(workspace=workspace)
-    props_map = {p["code"]: p["name"] for p in props_list if isinstance(p, dict)}
+    if custom and isinstance(custom, dict) and "department_names" in custom:
+        dnames = custom["department_names"]
+        if isinstance(dnames, dict) and len(dnames) > 0:
+            res = [{"code": str(k), "name": str(v)} for k, v in dnames.items()]
+            save_json('departments.json', res, workspace=workspace)
+            return res
     dept_name = "Hotel Engineering"
     if workspace not in ["default", "shajjad"]:
         u = get_user(workspace)
         if u and u.get("department"):
             dept_name = u["department"]
-    return {
-        "properties": props_map,
-        "department_names": {"0430": dept_name}
-    }
+    default_deps = [{"code": "0430", "name": dept_name}]
+    save_json('departments.json', default_deps, workspace=workspace)
+    return default_deps
+
+def save_departments(departments: List[Dict[str, str]], workspace: str = "default"):
+    save_json('departments.json', departments, workspace=workspace)
+    settings = load_json('default_settings.json', {}, workspace=workspace) or {}
+    dept_names = {d["code"]: d["name"] for d in departments if isinstance(d, dict) and "code" in d}
+    settings["department_names"] = dept_names
+    save_json('default_settings.json', settings, workspace=workspace)
+
+def load_settings(workspace: str = "default") -> Dict[str, Any]:
+    custom = load_json('default_settings.json', None, workspace=workspace)
+    if not custom or not isinstance(custom, dict):
+        custom = {}
+    props_list = load_properties(workspace=workspace)
+    props_map = {p["code"]: p["name"] for p in props_list if isinstance(p, dict)}
+    depts_list = load_departments(workspace=workspace)
+    dept_map = {d["code"]: d["name"] for d in depts_list if isinstance(d, dict)}
+    custom["properties"] = props_map
+    custom["department_names"] = dept_map
+    return custom
 
 # ================= Monthly Persistence Helpers =================
 
@@ -269,10 +292,11 @@ def get_month_data(year: int, month: int, workspace: str = "default"):
     for assoc in active_associates:
         prop = assoc.get("property", "RMH")
         comp = assoc.get("company", "Company")
-        key = f"{prop}_{comp}".replace(' ', '_').replace('-', '_')
+        dept_code = assoc.get("department", "0430")
+        key = f"{prop}_{comp}_{dept_code}".replace(' ', '_').replace('-', '_')
         
         if key not in groups_dict:
-            dept_title = depts.get(assoc.get("department", "0430"))
+            dept_title = depts.get(dept_code)
             if not dept_title:
                 dept_title = depts.get("0430", "Department")
             groups_dict[key] = {
@@ -281,6 +305,7 @@ def get_month_data(year: int, month: int, workspace: str = "default"):
                 "property_full": props.get(prop, f"{prop} Property"),
                 "company": comp,
                 "department": dept_title,
+                "department_code": dept_code,
                 "associates": []
             }
         groups_dict[key]["associates"].append(assoc)
@@ -297,7 +322,8 @@ def get_month_data(year: int, month: int, workspace: str = "default"):
         "settings": settings,
         "stamps": stamps,
         "companies": load_companies(workspace=workspace),
-        "properties": load_properties(workspace=workspace)
+        "properties": load_properties(workspace=workspace),
+        "departments": load_departments(workspace=workspace)
     }
 
 # ================= Routes & Views =================
@@ -462,6 +488,7 @@ async def dashboard_view(
             "settings": data["settings"],
             "companies": data["companies"],
             "properties": data["properties"],
+            "departments": data["departments"],
             "stamps": data["stamps"]
         }
     )
@@ -581,6 +608,7 @@ async def get_config(request: Request):
         "associates": load_associates(workspace=ws),
         "companies": load_companies(workspace=ws),
         "properties": load_properties(workspace=ws),
+        "departments": load_departments(workspace=ws),
         "stamps": load_stamps(workspace=ws),
         "authorizers": load_authorizers(workspace=ws)
     }
@@ -661,6 +689,39 @@ async def delete_property(request: Request, code: str):
     properties = [p for p in properties if p.get("code", "").upper() != code]
     save_json('properties.json', properties, workspace=ws)
     return {"success": True, "properties": properties}
+
+@app.get("/api/departments")
+async def get_departments_endpoint(request: Request):
+    ws = get_current_workspace(request)
+    return {"success": True, "departments": load_departments(workspace=ws)}
+
+@app.post("/api/departments")
+async def save_department_endpoint(request: Request, dept: Dict[str, str] = Body(...)):
+    ws = get_current_workspace(request)
+    code = dept.get("code", "").strip()
+    name = dept.get("name", "").strip()
+    if not code or not name:
+        raise HTTPException(status_code=400, detail="Code and Name required")
+    departments = load_departments(workspace=ws)
+    updated = False
+    for i, d in enumerate(departments):
+        if d.get("code", "").strip().upper() == code.upper():
+            departments[i] = {"code": code, "name": name}
+            updated = True
+            break
+    if not updated:
+        departments.append({"code": code, "name": name})
+    save_departments(departments, workspace=ws)
+    return {"success": True, "departments": departments}
+
+@app.delete("/api/departments/{code}")
+async def delete_department_endpoint(request: Request, code: str):
+    ws = get_current_workspace(request)
+    code_clean = code.strip().upper()
+    departments = load_departments(workspace=ws)
+    departments = [d for d in departments if d.get("code", "").strip().upper() != code_clean]
+    save_departments(departments, workspace=ws)
+    return {"success": True, "departments": departments}
 
 @app.post("/api/stamps")
 async def save_stamp(request: Request, stamp: Dict[str, Any] = Body(...)):
