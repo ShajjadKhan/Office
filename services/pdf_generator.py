@@ -157,13 +157,15 @@ def generate_company_pdf(
     
     # Active Authorizers
     if authorizers is not None:
-        active_auths = authorizers
+        active_auths = [a for a in authorizers if a.get("is_active", True)]
     else:
         active_auths = [
             {"title": "Department Head", "name": ""},
             {"title": "Director of Human Resource", "name": ""},
             {"title": "Director of Finance", "name": ""}
         ]
+    if not active_auths:
+        active_auths = [{"title": "Department Head", "name": ""}]
         
     n_auths = len(active_auths)
     tot_sig_width = 780.0

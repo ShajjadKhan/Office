@@ -84,7 +84,7 @@ def load_settings() -> Dict[str, Any]:
         "department_names": {"0430": "Hotel Engineering"}
     }
 
-# ================= Dynamic Month Cart Helpers =================
+# ================= Monthly Persistence Helpers =================
 
 def get_month_file_path(year: int, month: int) -> str:
     return os.path.join(SAVED_DIR, f"{year}_{month:02d}.json")
@@ -111,35 +111,23 @@ def write_month_file(year: int, month: int, data: Dict[str, Any]):
 def get_month_data(year: int, month: int):
     all_associates = load_associates()
     stamps = load_stamps()
-    all_authorizers = load_authorizers()
+    authorizers = load_authorizers()
     settings = load_settings()
     month_info = get_month_info(year, month)
     days_cnt = month_info["days_in_month"]
     
     saved_content = read_month_file(year, month)
     saved_days_map = {}
-    selected_assoc_ids = None
-    selected_auth_ids = None
-    
     if saved_content:
-        saved_assoc_list = saved_content.get("associates", [])
-        selected_auth_ids = saved_content.get("authorizer_ids")
-        selected_assoc_ids = []
-        for item in saved_assoc_list:
-            aid = item.get("id")
-            if aid is not None:
-                selected_assoc_ids.append(aid)
-                saved_days_map[aid] = item.get("days", [])
+        raw_list = saved_content.get("associates", []) if isinstance(saved_content, dict) else saved_content
+        if isinstance(raw_list, list):
+            for item in raw_list:
+                aid = item.get("id")
+                if aid is not None:
+                    saved_days_map[aid] = item.get("days", [])
                 
-    # 1. Active Associates for this month
-    if selected_assoc_ids is None:
-        active_roster = all_associates
-    else:
-        assoc_lookup = {a["id"]: a for a in all_associates}
-        active_roster = [assoc_lookup[aid] for aid in selected_assoc_ids if aid in assoc_lookup]
-        
     active_associates = []
-    for assoc in active_roster:
+    for assoc in all_associates:
         a_id = assoc["id"]
         if a_id in saved_days_map and len(saved_days_map[a_id]) == days_cnt:
             days = saved_days_map[a_id]
@@ -152,21 +140,7 @@ def get_month_data(year: int, month: int):
         item.update(totals)
         active_associates.append(item)
         
-    # 2. Available associates not in this month
-    active_ids_set = set(a["id"] for a in active_associates)
-    available_associates = [a for a in all_associates if a["id"] not in active_ids_set]
-    
-    # 3. Authorizers for this month
-    if selected_auth_ids is not None:
-        auth_lookup = {a["id"]: a for a in all_authorizers}
-        month_authorizers = [auth_lookup[aid] for aid in selected_auth_ids if aid in auth_lookup]
-    else:
-        month_authorizers = [a for a in all_authorizers if a.get("is_active", True)]
-        
-    auth_ids_set = set(a["id"] for a in month_authorizers)
-    available_authorizers = [a for a in all_authorizers if a["id"] not in auth_ids_set]
-    
-    # 4. Grouped reports for active associates
+    # Grouped reports for active associates
     groups_dict = {}
     props = settings.get("properties", {})
     depts = settings.get("department_names", {})
@@ -192,11 +166,9 @@ def get_month_data(year: int, month: int):
     return {
         "month_info": month_info,
         "active_associates": active_associates,
-        "available_associates": available_associates,
         "all_associates": all_associates,
-        "month_authorizers": month_authorizers,
-        "available_authorizers": available_authorizers,
-        "all_authorizers": all_authorizers,
+        "authorizers": authorizers,
+        "all_authorizers": authorizers,
         "groups": groups,
         "settings": settings,
         "stamps": stamps,
@@ -225,10 +197,8 @@ async def dashboard_view(
             "month_info": data["month_info"],
             "month_names": month_names,
             "associates": data["active_associates"],
-            "available_associates": data["available_associates"],
             "all_associates": data["all_associates"],
-            "authorizers": data["month_authorizers"],
-            "available_authorizers": data["available_authorizers"],
+            "authorizers": data["authorizers"],
             "all_authorizers": data["all_authorizers"],
             "groups": data["groups"],
             "settings": data["settings"],
@@ -263,7 +233,7 @@ async def print_report_view(
             "associates": target_group["associates"],
             "settings": data["settings"],
             "stamps": data["stamps"],
-            "authorizers": data["month_authorizers"]
+            "authorizers": data["authorizers"]
         }
     )
 
@@ -273,133 +243,8 @@ async def save_month_endpoint(
     month: int = Query(...),
     payload: Any = Body(...)
 ):
-    # Support both { associates: [...], authorizer_ids: [...] } and raw [ {id, days}, ... ]
-    if isinstance(payload, list):
-        data = get_month_data(year, month)
-        save_payload = {
-            "associates": payload,
-            "authorizer_ids": [a["id"] for a in data["month_authorizers"]]
-        }
-    elif isinstance(payload, dict):
-        if "authorizer_ids" not in payload:
-            data = get_month_data(year, month)
-            payload["authorizer_ids"] = [a["id"] for a in data["month_authorizers"]]
-        save_payload = payload
-    else:
-        raise HTTPException(status_code=400, detail="Invalid payload format")
-
-    write_month_file(year, month, save_payload)
-    return {"success": True, "message": f"Saved attendance and signers for {year}-{month:02d}"}
-
-# ================= Shopping Cart API Endpoints for Associates & Signers =================
-
-@app.post("/api/month/add-associate")
-async def month_add_associate(
-    payload: Dict[str, Any] = Body(...)
-):
-    year = int(payload.get("year", 2026))
-    month = int(payload.get("month", 10))
-    assoc_id = int(payload.get("assoc_id"))
-    
-    data = get_month_data(year, month)
-    days_cnt = data["month_info"]["days_in_month"]
-    
-    # Check if frontend passed current active state
-    cur_assoc = payload.get("current_associates")
-    if cur_assoc and isinstance(cur_assoc, list):
-        active_assoc_list = list(cur_assoc)
-    else:
-        active_assoc_list = [{"id": a["id"], "days": a["days"]} for a in data["active_associates"]]
-    
-    # Check if already present
-    if not any(a["id"] == assoc_id for a in active_assoc_list):
-        all_associates = load_associates()
-        target = next((a for a in all_associates if a["id"] == assoc_id), None)
-        if target:
-            new_days = generate_default_days(days_cnt, off_days_count=4, seed_offset=assoc_id * 7 + month)
-            active_assoc_list.append({"id": assoc_id, "days": new_days})
-            
-    # Save month file
-    save_payload = {
-        "associates": active_assoc_list,
-        "authorizer_ids": [a["id"] for a in data["month_authorizers"]]
-    }
-    write_month_file(year, month, save_payload)
-    return {"success": True, "message": "Associate added to this month's sheet"}
-
-@app.post("/api/month/remove-associate")
-async def month_remove_associate(
-    payload: Dict[str, Any] = Body(...)
-):
-    year = int(payload.get("year", 2026))
-    month = int(payload.get("month", 10))
-    assoc_id = int(payload.get("assoc_id"))
-    
-    data = get_month_data(year, month)
-    cur_assoc = payload.get("current_associates")
-    if cur_assoc and isinstance(cur_assoc, list):
-        base_list = cur_assoc
-    else:
-        base_list = [{"id": a["id"], "days": a["days"]} for a in data["active_associates"]]
-        
-    active_assoc_list = [a for a in base_list if a["id"] != assoc_id]
-    
-    save_payload = {
-        "associates": active_assoc_list,
-        "authorizer_ids": [a["id"] for a in data["month_authorizers"]]
-    }
-    write_month_file(year, month, save_payload)
-    return {"success": True, "message": "Associate removed from this month's sheet"}
-
-@app.post("/api/month/add-authorizer")
-async def month_add_authorizer(
-    payload: Dict[str, Any] = Body(...)
-):
-    year = int(payload.get("year", 2026))
-    month = int(payload.get("month", 10))
-    auth_id = int(payload.get("auth_id"))
-    
-    data = get_month_data(year, month)
-    cur_assoc = payload.get("current_associates")
-    if cur_assoc and isinstance(cur_assoc, list):
-        active_assoc_list = cur_assoc
-    else:
-        active_assoc_list = [{"id": a["id"], "days": a["days"]} for a in data["active_associates"]]
-        
-    month_auth_ids = [a["id"] for a in data["month_authorizers"]]
-    if auth_id not in month_auth_ids:
-        month_auth_ids.append(auth_id)
-        
-    save_payload = {
-        "associates": active_assoc_list,
-        "authorizer_ids": month_auth_ids
-    }
-    write_month_file(year, month, save_payload)
-    return {"success": True, "authorizer_ids": month_auth_ids}
-
-@app.post("/api/month/remove-authorizer")
-async def month_remove_authorizer(
-    payload: Dict[str, Any] = Body(...)
-):
-    year = int(payload.get("year", 2026))
-    month = int(payload.get("month", 10))
-    auth_id = int(payload.get("auth_id"))
-    
-    data = get_month_data(year, month)
-    cur_assoc = payload.get("current_associates")
-    if cur_assoc and isinstance(cur_assoc, list):
-        active_assoc_list = cur_assoc
-    else:
-        active_assoc_list = [{"id": a["id"], "days": a["days"]} for a in data["active_associates"]]
-        
-    month_auth_ids = [a["id"] for a in data["month_authorizers"] if a["id"] != auth_id]
-    
-    save_payload = {
-        "associates": active_assoc_list,
-        "authorizer_ids": month_auth_ids
-    }
-    write_month_file(year, month, save_payload)
-    return {"success": True, "authorizer_ids": month_auth_ids}
+    write_month_file(year, month, payload)
+    return {"success": True, "message": f"Saved attendance for {year}-{month:02d}"}
 
 # ================= Configuration & Master Data Endpoints =================
 
@@ -603,7 +448,7 @@ async def export_single_pdf(
         associates=g["associates"],
         settings=data["settings"],
         stamps=data["stamps"],
-        authorizers=data["month_authorizers"]
+        authorizers=data["authorizers"]
     )
     
     return FileResponse(file_path, media_type="application/pdf", filename=filename)
@@ -632,7 +477,7 @@ async def export_single_excel(
         associates=g["associates"],
         settings=data["settings"],
         stamps=data["stamps"],
-        authorizers=data["month_authorizers"]
+        authorizers=data["authorizers"]
     )
     
     return FileResponse(file_path, media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", filename=filename)
@@ -678,7 +523,7 @@ async def export_pdfs_zip(
                 associates=g["associates"],
                 settings=data["settings"],
                 stamps=data["stamps"],
-                authorizers=data["month_authorizers"]
+                authorizers=data["authorizers"]
             )
             z.write(temp_pdf_path, arcname=pdf_name)
             
@@ -716,7 +561,7 @@ async def export_excels_zip(
                 associates=g["associates"],
                 settings=data["settings"],
                 stamps=data["stamps"],
-                authorizers=data["month_authorizers"]
+                authorizers=data["authorizers"]
             )
             z.write(temp_path, arcname=xl_name)
             
@@ -754,7 +599,7 @@ async def export_all_zip(
                 associates=g["associates"],
                 settings=data["settings"],
                 stamps=data["stamps"],
-                authorizers=data["month_authorizers"]
+                authorizers=data["authorizers"]
             )
             z.write(temp_path, arcname=xl_name)
             
@@ -772,7 +617,7 @@ async def export_all_zip(
                 associates=g["associates"],
                 settings=data["settings"],
                 stamps=data["stamps"],
-                authorizers=data["month_authorizers"]
+                authorizers=data["authorizers"]
             )
             z.write(temp_pdf_path, arcname=pdf_name)
             

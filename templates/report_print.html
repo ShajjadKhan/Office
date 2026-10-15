@@ -205,11 +205,13 @@
 
     <div class="signature-section">
       {% for auth in authorizers %}
+        {% if auth.is_active %}
         <div class="sig-block">
           <div class="sig-line"></div>
           <div class="sig-title">{{ auth.title }}</div>
           {% if auth.name %}<div class="sig-name">({{ auth.name }})</div>{% endif %}
         </div>
+        {% endif %}
       {% endfor %}
     </div>
   </div>

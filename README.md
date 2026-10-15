@@ -4,9 +4,9 @@ A standalone, automated monthly attendance timesheet and salary reporting suite 
 
 ## Features
 - **Dynamic Attendance Grid**: Interactive monthly calendar with auto Weekly Off (`WO`) assignments, configurable stamp codes (8h, WO, PH, SL, AL, A, V), and live totals calculation.
-- **Shopping Cart System**:
-  - **Associates Cart**: Remove associates on vacation or off-schedule from the active month report with 1 click (`✕`); re-add them anytime from the dropdown.
-  - **Authorizer Signers Cart**: Add or remove report authorizers per month dynamically (e.g. if someone is on leave).
+- **Flexible Authorizer Management**:
+  - Configure signers (Department Head, HR, Finance, GM, etc.) and easily toggle active/inactive status whenever someone is on leave.
+  - Active authorizers automatically populate on all exported PDF, Excel, and Print reports.
 - **Official Report Exports**:
   - **Master Excel**: Comprehensive monthly attendance matrix with dynamic Excel `COUNTIF` formulas.
   - **Company Excels**: Multi-sheet workbook with Sheet 1 (Daily Attendance Matrix) and Sheet 2 (Overtime Transaction Records).

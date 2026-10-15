@@ -205,13 +205,15 @@ def generate_company_excel(
     # Dynamic Signatures Row
     sig_row = max(current_row + 5, 26)
     if authorizers is not None:
-        active_auths = authorizers
+        active_auths = [a for a in authorizers if a.get("is_active", True)]
     else:
         active_auths = [
             {"title": "Department Head", "name": ""},
             {"title": "Director of Human Resource", "name": ""},
             {"title": "Director of Finance", "name": ""}
         ]
+    if not active_auths:
+        active_auths = [{"title": "Department Head", "name": ""}]
         
     n_auths = len(active_auths)
     start_c = 4  # Column D

@@ -348,145 +348,29 @@
       gap: 6px;
     }
 
-    /* Shopping Cart & Associate Bar */
-    .cart-assoc-bar {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      flex-wrap: wrap;
-      gap: 12px;
-      background: #f0fdf4;
-      border: 1px solid #bbf7d0;
-      border-radius: 10px;
-      padding: 12px 18px;
-      margin-bottom: 16px;
-    }
-    .cart-assoc-left {
+    /* Active Signatures Bar on Dashboard */
+    .auth-banner {
       display: flex;
       align-items: center;
       gap: 12px;
-      flex-wrap: wrap;
-    }
-    .cart-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      font-size: 13px;
-      font-weight: 800;
-      color: #166534;
-    }
-    .cart-assoc-controls {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      flex-wrap: wrap;
-    }
-    .cart-assoc-tip {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      font-size: 12px;
-      color: #15803d;
-    }
-    .btn-remove-row {
-      background: #fee2e2;
-      border: 1px solid #fca5a5;
-      color: #dc2626;
-      border-radius: 6px;
-      font-weight: 800;
-      font-size: 11px;
-      cursor: pointer;
-      padding: 3px 8px;
-      line-height: 1;
-      transition: all 0.15s ease;
-    }
-    .btn-remove-row:hover {
-      background: #dc2626;
-      color: white;
-      border-color: #b91c1c;
-      transform: scale(1.08);
-    }
-
-    /* Shopping Cart Authorizer Pills */
-    .auth-cart-card {
-      background: var(--card-bg);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 18px 20px;
-      margin-top: 20px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-    }
-    .auth-cart-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 14px;
-      flex-wrap: wrap;
-      gap: 12px;
-    }
-    .auth-cart-title {
-      font-size: 15px;
-      font-weight: 800;
-      color: #0f172a;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    .auth-pills-container {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      flex-wrap: wrap;
       background: #f8fafc;
       border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 12px 16px;
-      min-height: 48px;
+      border-radius: 8px;
+      padding: 10px 16px;
+      margin-top: 16px;
+      font-size: 12px;
+      color: var(--text-muted);
+      flex-wrap: wrap;
     }
-    .auth-pill-cart {
+    .auth-pill {
       display: inline-flex;
       align-items: center;
-      gap: 8px;
-      background: #ffffff;
+      gap: 4px;
+      background: #e2e8f0;
       color: #0f172a;
-      padding: 6px 12px;
-      border-radius: 8px;
-      font-weight: 700;
-      font-size: 13px;
-      border: 1px solid #cbd5e1;
-      box-shadow: 0 1px 2px rgba(0,0,0,0.04);
-      transition: all 0.15s ease;
-    }
-    .auth-pill-cart:hover {
-      border-color: #94a3b8;
-    }
-    .btn-pill-remove {
-      background: #fee2e2;
-      color: #dc2626;
-      border: 1px solid #fecaca;
-      border-radius: 50%;
-      width: 18px;
-      height: 18px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 10px;
-      font-weight: 800;
-      cursor: pointer;
-      line-height: 1;
-      transition: all 0.15s ease;
-    }
-    .btn-pill-remove:hover {
-      background: #dc2626;
-      color: #fff;
-      transform: scale(1.15);
-    }
-    .auth-add-row {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      margin-top: 14px;
-      flex-wrap: wrap;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-weight: 600;
     }
 
     /* ================= Slide-Over Left Drawer ================= */
@@ -735,32 +619,6 @@
         </div>
       </div>
 
-      <!-- Associate Shopping Cart Toolbar -->
-      <div class="cart-assoc-bar">
-        <div class="cart-assoc-left">
-          <span class="cart-badge">🛒 Monthly Associate Roster ({{ associates|length }} Active)</span>
-          <div class="cart-assoc-controls">
-            <select id="selAddAssociate" style="padding: 6px 12px; font-size: 13px; border-radius: 6px; min-width: 280px; border: 1px solid #86efac; background: #fff;">
-              {% if available_associates %}
-                <option value="">-- Choose Associate to Add to Month --</option>
-                {% for a in available_associates %}
-                  <option value="{{ a.id }}">{{ a.name }} ({{ a.iqama }}) — {{ a.company }} [{{ a.property }}]</option>
-                {% endfor %}
-              {% else %}
-                <option value="">All associates in database are currently active</option>
-              {% endif %}
-            </select>
-            <button class="btn btn-success btn-sm" onclick="addAssociateToMonth()" {% if not available_associates %}disabled{% endif %}>
-              ➕ Add to Month
-            </button>
-          </div>
-        </div>
-        <div class="cart-assoc-tip">
-          <span>💡 <em>Vacation or leave?</em> Click <strong style="color: #ef4444;">✕</strong> on any employee row to exclude them from this month.</span>
-          <button class="btn btn-outline btn-sm" onclick="openDrawer('employees')">👥 Master Staff</button>
-        </div>
-      </div>
-
       <div class="table-responsive">
         <table class="data-table" id="attendanceTable">
           <thead>
@@ -772,9 +630,8 @@
               {% for d in range(1, month_info.days_in_month + 1) %}
                 <th style="width: 25px;">{{ d }}</th>
               {% endfor %}
-              <th style="width: 48px; background: #eef2f6;">Work</th>
-              <th style="width: 52px; background: #e0f2fe; color: #0369a1;">Hours</th>
-              <th style="width: 38px; background: #fef2f2; color: #b91c1c;">Cart</th>
+              <th style="width: 50px; background: #eef2f6;">Work</th>
+              <th style="width: 55px; background: #e0f2fe; color: #0369a1;">Hours</th>
             </tr>
           </thead>
           <tbody>
@@ -799,57 +656,21 @@
               {% endfor %}
               <td class="row-work-days" style="font-weight: 700; background: #f8fafc;">{{ assoc.work_days }}</td>
               <td class="row-total-hours" style="font-weight: 800; color: #0284c7; background: #f0f9ff;">{{ assoc.total_hours }}</td>
-              <td style="text-align: center; background: #fff;">
-                <button type="button" class="btn-remove-row" onclick="removeAssociateFromMonth({{ assoc.id }}, '{{ assoc.name|replace("'", "\\'") }}')" title="Exclude {{ assoc.name }} from this month's reports (e.g. on vacation)">✕</button>
-              </td>
             </tr>
             {% endfor %}
           </tbody>
         </table>
       </div>
 
-      <!-- Interactive Shopping Cart Authorizers -->
-      <div class="auth-cart-card">
-        <div class="auth-cart-header">
-          <div>
-            <div class="auth-cart-title">✍️ Report Signers for {{ month_info.label }} (Cart Mode)</div>
-            <p style="font-size: 12px; color: var(--text-muted); margin-top: 3px;">
-              Easily remove anyone who is on vacation/leave using <strong style="color: #dc2626;">✕</strong>. Add any signer back using the dropdown. Only active signers print on PDF and Excel.
-            </p>
-          </div>
-          <button class="btn btn-outline btn-sm" onclick="openDrawer('authorizers')">⚙️ Manage Master Signatures</button>
-        </div>
-
-        <div class="auth-pills-container" id="authPillsBox">
-          <span style="font-size: 12px; font-weight: 700; color: #475569; margin-right: 4px;">Active on Reports:</span>
-          {% if authorizers %}
-            {% for a in authorizers %}
-              <div class="auth-pill-cart">
-                <span>✍️ <strong>{{ a.title }}</strong>{% if a.name %} <span style="font-weight: 500; color: #475569;">({{ a.name }})</span>{% endif %}</span>
-                <button type="button" class="btn-pill-remove" onclick="removeSignerFromMonth({{ a.id }}, '{{ a.title|replace("'", "\\'") }}')" title="Remove {{ a.title }} from this month's reports">✕</button>
-              </div>
-            {% endfor %}
-          {% else %}
-            <span style="font-size: 12px; color: #dc2626; font-style: italic;">No signers active for this month. Select a signer below to add.</span>
+      <!-- Active Signatures Info Bar -->
+      <div class="auth-banner">
+        <span><strong>Active Authorizer Signatures (on Reports):</strong></span>
+        {% for a in authorizers %}
+          {% if a.is_active %}
+            <span class="auth-pill">✍️ {{ a.title }} {% if a.name %}({{ a.name }}){% endif %}</span>
           {% endif %}
-        </div>
-
-        <div class="auth-add-row">
-          <label style="font-size: 13px; font-weight: 700; color: #334155;">➕ Add Signer to Month:</label>
-          <select id="selAddAuthorizer" style="padding: 6px 12px; font-size: 13px; border-radius: 6px; min-width: 280px; border: 1px solid var(--border);">
-            {% if available_authorizers %}
-              <option value="">-- Select Signer to Add to Report --</option>
-              {% for a in available_authorizers %}
-                <option value="{{ a.id }}">{{ a.title }}{% if a.name %} ({{ a.name }}){% endif %}</option>
-              {% endfor %}
-            {% else %}
-              <option value="">All configured signers are already active on this report</option>
-            {% endif %}
-          </select>
-          <button class="btn btn-primary btn-sm" onclick="addSignerToMonth()" {% if not available_authorizers %}disabled{% endif %}>
-            ➕ Add Signer
-          </button>
-        </div>
+        {% endfor %}
+        <button class="btn btn-outline btn-sm" onclick="openDrawer('authorizers')" style="margin-left: auto;">⚙️ Manage Signatures</button>
       </div>
     </div>
 
@@ -1252,159 +1073,15 @@
       });
     }
 
-    function getCurrentAttendancePayload() {
-      const list = [];
-      document.querySelectorAll('#attendanceTable tbody tr').forEach(row => {
-        const id = parseInt(row.getAttribute('data-assoc-id'));
-        const days = Array.from(row.querySelectorAll('.day-cell')).map(c => c.innerText.trim());
-        if (!isNaN(id)) {
-          list.push({ id, days });
-        }
-      });
-      return list;
-    }
-
-    /* Shopping Cart Action: Add Signer to this month's reports */
-    async function addSignerToMonth() {
-      const sel = document.getElementById('selAddAuthorizer');
-      const authId = sel.value;
-      if (!authId) {
-        alert('Please select a signer to add from the dropdown.');
-        return;
-      }
-      const y = document.getElementById('selYear').value;
-      const m = document.getElementById('selMonth').value;
-      const curAssoc = getCurrentAttendancePayload();
-
-      try {
-        const res = await fetch('/api/month/add-authorizer', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            year: parseInt(y),
-            month: parseInt(m),
-            auth_id: parseInt(authId),
-            current_associates: curAssoc
-          })
-        });
-        const data = await res.json();
-        if (data.success) {
-          window.location.reload();
-        } else {
-          alert('Could not add signer: ' + (data.message || 'Unknown error'));
-        }
-      } catch (err) {
-        alert('Network error while adding signer: ' + err);
-      }
-    }
-
-    /* Shopping Cart Action: Remove Signer from this month's reports */
-    async function removeSignerFromMonth(authId, title) {
-      if (!confirm('Remove signer "' + title + '" from ' + document.getElementById('selMonth').options[document.getElementById('selMonth').selectedIndex].text + ' reports?\n(You can add them back anytime from the dropdown)')) {
-        return;
-      }
-      const y = document.getElementById('selYear').value;
-      const m = document.getElementById('selMonth').value;
-      const curAssoc = getCurrentAttendancePayload();
-
-      try {
-        const res = await fetch('/api/month/remove-authorizer', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            year: parseInt(y),
-            month: parseInt(m),
-            auth_id: parseInt(authId),
-            current_associates: curAssoc
-          })
-        });
-        const data = await res.json();
-        if (data.success) {
-          window.location.reload();
-        } else {
-          alert('Could not remove signer: ' + (data.message || 'Unknown error'));
-        }
-      } catch (err) {
-        alert('Network error while removing signer: ' + err);
-      }
-    }
-
-    /* Shopping Cart Action: Add Associate to this month's roster */
-    async function addAssociateToMonth() {
-      const sel = document.getElementById('selAddAssociate');
-      const assocId = sel.value;
-      if (!assocId) {
-        alert('Please choose an associate from the dropdown to add.');
-        return;
-      }
-      const y = document.getElementById('selYear').value;
-      const m = document.getElementById('selMonth').value;
-      const curAssoc = getCurrentAttendancePayload();
-
-      try {
-        const res = await fetch('/api/month/add-associate', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            year: parseInt(y),
-            month: parseInt(m),
-            assoc_id: parseInt(assocId),
-            current_associates: curAssoc
-          })
-        });
-        const data = await res.json();
-        if (data.success) {
-          window.location.reload();
-        } else {
-          alert('Could not add associate: ' + (data.message || 'Unknown error'));
-        }
-      } catch (err) {
-        alert('Network error while adding associate: ' + err);
-      }
-    }
-
-    /* Shopping Cart Action: Remove Associate from this month's roster */
-    async function removeAssociateFromMonth(assocId, name) {
-      if (!confirm('Exclude ' + name + ' from this month\'s report?\n(They will stay saved in master staff and can be added back anytime)')) {
-        return;
-      }
-      const y = document.getElementById('selYear').value;
-      const m = document.getElementById('selMonth').value;
-      const curAssoc = getCurrentAttendancePayload();
-
-      try {
-        const res = await fetch('/api/month/remove-associate', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            year: parseInt(y),
-            month: parseInt(m),
-            assoc_id: parseInt(assocId),
-            current_associates: curAssoc
-          })
-        });
-        const data = await res.json();
-        if (data.success) {
-          window.location.reload();
-        } else {
-          alert('Could not remove associate: ' + (data.message || 'Unknown error'));
-        }
-      } catch (err) {
-        alert('Network error while removing associate: ' + err);
-      }
-    }
-
-    /* Save Changes Button */
     async function saveChanges() {
       const y = document.getElementById('selYear').value;
       const m = document.getElementById('selMonth').value;
-      const assocList = getCurrentAttendancePayload();
-      const authIds = authorizersData.map(a => a.id);
-
-      const payload = {
-        associates: assocList,
-        authorizer_ids: authIds
-      };
+      const payload = [];
+      document.querySelectorAll('#attendanceTable tbody tr').forEach(row => {
+        const id = parseInt(row.getAttribute('data-assoc-id'));
+        const days = Array.from(row.querySelectorAll('.day-cell')).map(c => c.innerText.trim());
+        payload.push({ id, days });
+      });
 
       try {
         const url = '/api/save-month?year=' + encodeURIComponent(y) + '&month=' + encodeURIComponent(m);
@@ -1415,7 +1092,7 @@
         });
         const data = await res.json();
         if (data.success) {
-          alert('✓ Month attendance and signers successfully saved!');
+          alert('✓ Month attendance successfully saved!');
         } else {
           alert('Failed to save: ' + (data.message || 'Unknown error'));
         }
@@ -1423,6 +1100,8 @@
         alert('Network error while saving: ' + err);
       }
     }
+
+
 
     function loadMonthData() {
       const y = document.getElementById('selYear').value;
