@@ -536,6 +536,259 @@
     }
     .toggle-on { background: #d1fae5; color: #065f46; border-color: #a7f3d0; }
     .toggle-off { background: #f1f5f9; color: #64748b; border-color: #cbd5e1; }
+
+    /* Quick Schedule Entry Card */
+    .shortcut-card {
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 18px 22px;
+      margin-bottom: 20px;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+    }
+    .shortcut-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border);
+    }
+    .shortcut-header h3 {
+      font-size: 15px;
+      font-weight: 700;
+      color: #1e293b;
+      margin: 0;
+    }
+    .shortcut-header p {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin: 2px 0 0 0;
+    }
+    .shortcut-label {
+      display: block;
+      font-size: 12px;
+      font-weight: 700;
+      color: #334155;
+      margin-bottom: 6px;
+    }
+    .shortcut-emp-section {
+      margin-bottom: 16px;
+      position: relative;
+    }
+    .autocomplete-wrapper {
+      position: relative;
+      max-width: 520px;
+    }
+    .shortcut-search-input {
+      width: 100%;
+      padding: 9px 14px;
+      font-size: 14px;
+      border: 1.5px solid #cbd5e1;
+      border-radius: 8px;
+      outline: none;
+      transition: all 0.2s;
+      background: #f8fafc;
+    }
+    .shortcut-search-input:focus {
+      background: #fff;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+    }
+    .autocomplete-dropdown {
+      position: absolute;
+      top: calc(100% + 4px);
+      left: 0;
+      width: 100%;
+      max-height: 250px;
+      overflow-y: auto;
+      background: #ffffff;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -4px rgba(0,0,0,0.1);
+      z-index: 100;
+    }
+    .autocomplete-item {
+      padding: 9px 12px;
+      cursor: pointer;
+      border-bottom: 1px solid #f1f5f9;
+      transition: background 0.12s;
+    }
+    .autocomplete-item:last-child { border-bottom: none; }
+    .autocomplete-item:hover { background: #f0fdf4; }
+    .autocomplete-name {
+      font-size: 13px;
+      font-weight: 700;
+      color: #0f172a;
+    }
+    .autocomplete-meta {
+      font-size: 11px;
+      color: #64748b;
+      display: flex;
+      gap: 6px;
+      align-items: center;
+      margin-top: 2px;
+    }
+    .autocomplete-empty {
+      padding: 12px;
+      font-size: 13px;
+      color: #94a3b8;
+      text-align: center;
+    }
+    .selected-emp-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 8px;
+      background: #ecfdf5;
+      border: 1px solid #a7f3d0;
+      color: #065f46;
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .btn-clear-selection {
+      background: transparent;
+      border: none;
+      color: #059669;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 700;
+      padding: 0 2px;
+    }
+    .btn-clear-selection:hover { color: #dc2626; }
+
+    /* Box Pairs */
+    .shortcut-dates-section {
+      margin-bottom: 16px;
+    }
+    .shortcut-pairs-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: flex-end;
+    }
+    .shortcut-pair {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      background: #f8fafc;
+      border: 1.5px solid #cbd5e1;
+      border-radius: 8px;
+      padding: 8px 10px;
+      width: 105px;
+      position: relative;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+      transition: border-color 0.15s;
+    }
+    .shortcut-pair:focus-within {
+      border-color: var(--primary);
+    }
+    .pair-box {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .pair-box-label {
+      font-size: 10px;
+      font-weight: 700;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .pair-date-input {
+      width: 100%;
+      padding: 6px 4px;
+      border: 1px solid #cbd5e1;
+      border-radius: 4px;
+      font-size: 13px;
+      font-weight: 800;
+      text-align: center;
+      background: #ffffff;
+      color: #0f172a;
+    }
+    .pair-stamp-select {
+      width: 100%;
+      padding: 5px 2px;
+      border: 1px solid #cbd5e1;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: 700;
+      text-align: center;
+      background: #ffffff;
+      color: #0f172a;
+      cursor: pointer;
+    }
+    .btn-remove-pair {
+      position: absolute;
+      top: -7px;
+      right: -7px;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: #ef4444;
+      color: #ffffff;
+      border: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      font-weight: 800;
+      cursor: pointer;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.25);
+    }
+    .btn-remove-pair:hover {
+      background: #dc2626;
+      transform: scale(1.1);
+    }
+    .btn-add-pair-box {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      width: 90px;
+      height: 108px;
+      background: #f1f5f9;
+      border: 2px dashed #94a3b8;
+      border-radius: 8px;
+      color: #475569;
+      cursor: pointer;
+      font-size: 11px;
+      font-weight: 700;
+      transition: all 0.15s;
+    }
+    .btn-add-pair-box:hover {
+      background: #e2e8f0;
+      border-color: var(--primary);
+      color: var(--primary);
+      transform: translateY(-1px);
+    }
+
+    .shortcut-actions-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding-top: 10px;
+      border-top: 1px solid #f1f5f9;
+    }
+
+    /* Table row delete button */
+    .btn-row-del {
+      background: transparent;
+      border: none;
+      color: #94a3b8;
+      cursor: pointer;
+      font-size: 12px;
+      padding: 2px 4px;
+      border-radius: 4px;
+      transition: all 0.15s;
+    }
+    .btn-row-del:hover {
+      color: #ef4444;
+      background: #fee2e2;
+    }
   </style>
 </head>
 <body>
@@ -599,6 +852,56 @@
       </div>
     </div>
 
+    <!-- Quick Schedule Entry Shortcut Card -->
+    <div class="shortcut-card">
+      <div class="shortcut-header">
+        <span style="font-size: 24px;">⚡</span>
+        <div>
+          <h3>Quick Schedule Entry Shortcut</h3>
+          <p>Search employee and specify their off-days or stamps (upper box: date, lower box: stamp). All other days automatically default to 8 hours.</p>
+        </div>
+      </div>
+
+      <div class="shortcut-body">
+        <!-- 1. Search Employee -->
+        <div class="shortcut-emp-section">
+          <label class="shortcut-label">Associate Name (Type min. 2 letters for auto-suggestions):</label>
+          <div class="autocomplete-wrapper">
+            <input type="text"
+                   id="shortcutEmpSearch"
+                   class="shortcut-search-input"
+                   placeholder="🔍 Type employee name (e.g. 'Shajjad')..."
+                   autocomplete="off"
+                   oninput="handleEmpSearchInput(this.value)">
+            <input type="hidden" id="shortcutSelectedAssocId" value="">
+            <div id="autocompleteDropdown" class="autocomplete-dropdown" style="display: none;"></div>
+          </div>
+          <div id="selectedEmpBadge" class="selected-emp-badge" style="display: none;"></div>
+        </div>
+
+        <!-- 2. Stacked Date & Stamp Pairs -->
+        <div class="shortcut-dates-section">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <label class="shortcut-label" style="margin: 0;">Specify Off / Stamp Days (Click ➕ on the right to add more):</label>
+          </div>
+          <div class="shortcut-pairs-container" id="shortcutPairsContainer">
+            <!-- Dynamically populated with stacked box pairs & ➕ Add Date button -->
+          </div>
+        </div>
+
+        <!-- 3. Actions -->
+        <div class="shortcut-actions-row">
+          <button type="button" class="btn btn-primary" onclick="submitShortcutEntry()" style="padding: 9px 20px; font-weight: 700; display: flex; align-items: center; gap: 6px;">
+            <span>💾</span> Save & Add to Sheet
+          </button>
+          <button type="button" class="btn btn-outline" onclick="resetShortcutForm()" style="padding: 9px 16px;">
+            🔄 Reset Boxes
+          </button>
+          <span id="shortcutStatusMsg" style="font-size: 13px; font-weight: 600; margin-left: 10px;"></span>
+        </div>
+      </div>
+    </div>
+
     <!-- Main Table Card -->
     <div class="card">
       <div class="card-header">
@@ -623,7 +926,7 @@
         <table class="data-table" id="attendanceTable">
           <thead>
             <tr>
-              <th style="width: 30px;">#</th>
+              <th style="width: 44px;">#</th>
               <th class="col-sticky-name" style="width: 180px;">Associate Name</th>
               <th style="width: 110px;">Company</th>
               <th style="width: 50px;">Prop</th>
@@ -637,7 +940,12 @@
           <tbody>
             {% for assoc in associates %}
             <tr data-assoc-id="{{ assoc.id }}">
-              <td>{{ loop.index }}</td>
+              <td>
+                <div style="display: flex; align-items: center; justify-content: center; gap: 3px;">
+                  <span>{{ loop.index }}</span>
+                  <button type="button" class="btn-row-del" onclick="removeAssociateFromMonth({{ assoc.id }}, '{{ assoc.name|escape }}')" title="Remove from this month's report">🗑️</button>
+                </div>
+              </td>
               <td class="col-sticky-name">
                 <div>{{ assoc.name }}</div>
                 <div style="font-size: 10px; color: var(--text-muted); font-family: monospace;">{{ assoc.iqama }}</div>
@@ -656,6 +964,14 @@
               {% endfor %}
               <td class="row-work-days" style="font-weight: 700; background: #f8fafc;">{{ assoc.work_days }}</td>
               <td class="row-total-hours" style="font-weight: 800; color: #0284c7; background: #f0f9ff;">{{ assoc.total_hours }}</td>
+            </tr>
+            {% else %}
+            <tr>
+              <td colspan="{{ month_info.days_in_month + 6 }}" style="text-align: center; padding: 48px 20px; background: #fafafa;">
+                <div style="font-size: 36px; margin-bottom: 8px;">📋</div>
+                <div style="font-size: 16px; font-weight: 700; color: #334155;">No Associates Added to {{ month_info.label }} Sheet Yet</div>
+                <div style="font-size: 13px; color: #64748b; margin-top: 4px;">Use the <strong>Quick Schedule Entry Shortcut</strong> above to search recorded employees and enter their off-days.</div>
+              </td>
             </tr>
             {% endfor %}
           </tbody>
@@ -1073,14 +1389,265 @@
       });
     }
 
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    // ================= Quick Schedule Entry Logic =================
+    let pairIdCounter = 0;
+    const currentMonthDays = {{ month_info.days_in_month }};
+
+    function handleEmpSearchInput(query) {
+      const dropdown = document.getElementById('autocompleteDropdown');
+      const q = (query || '').trim().toLowerCase();
+      
+      if (q.length < 2) {
+        dropdown.style.display = 'none';
+        dropdown.innerHTML = '';
+        return;
+      }
+      
+      const matches = allAssociatesData.filter(a => {
+        const nameMatch = (a.name || '').toLowerCase().includes(q);
+        const iqamaMatch = (a.iqama || '').toLowerCase().includes(q);
+        const compMatch = (a.company || '').toLowerCase().includes(q);
+        return nameMatch || iqamaMatch || compMatch;
+      });
+      
+      if (matches.length === 0) {
+        dropdown.innerHTML = '<div class="autocomplete-empty">No matching recorded employees found</div>';
+        dropdown.style.display = 'block';
+        return;
+      }
+      
+      dropdown.innerHTML = matches.map(a => `
+        <div class="autocomplete-item" onclick="selectEmployee(${a.id})">
+          <div class="autocomplete-name">${escapeHtml(a.name)}</div>
+          <div class="autocomplete-meta">
+            <span>Iqama: <code>${escapeHtml(a.iqama || 'N/A')}</code></span>
+            <span>•</span>
+            <span>${escapeHtml(a.company)}</span>
+            <span>•</span>
+            <span class="badge ${a.property === 'RMH' ? 'badge-rmh' : 'badge-mea'}">${escapeHtml(a.property)}</span>
+          </div>
+        </div>
+      `).join('');
+      dropdown.style.display = 'block';
+    }
+
+    function selectEmployee(id) {
+      const emp = allAssociatesData.find(a => a.id === id);
+      if (!emp) return;
+      document.getElementById('shortcutEmpSearch').value = emp.name;
+      document.getElementById('shortcutSelectedAssocId').value = emp.id;
+      document.getElementById('autocompleteDropdown').style.display = 'none';
+      
+      const badge = document.getElementById('selectedEmpBadge');
+      badge.innerHTML = `
+        <span>✓ Ready: <strong>${escapeHtml(emp.name)}</strong> (${escapeHtml(emp.company)} - ${escapeHtml(emp.property)})</span>
+        <button type="button" class="btn-clear-selection" onclick="clearSelectedEmployee()" title="Clear selection">✕</button>
+      `;
+      badge.style.display = 'inline-flex';
+    }
+
+    function clearSelectedEmployee() {
+      document.getElementById('shortcutEmpSearch').value = '';
+      document.getElementById('shortcutSelectedAssocId').value = '';
+      document.getElementById('selectedEmpBadge').style.display = 'none';
+      document.getElementById('autocompleteDropdown').style.display = 'none';
+    }
+
+    // Close autocomplete when clicking outside
+    document.addEventListener('click', function(e) {
+      const wrapper = document.querySelector('.autocomplete-wrapper');
+      if (wrapper && !wrapper.contains(e.target)) {
+        const dropdown = document.getElementById('autocompleteDropdown');
+        if (dropdown) dropdown.style.display = 'none';
+      }
+    });
+
+    function getStampSelectOptions(selectedStamp = 'WO') {
+      return stampsData.map(st => 
+        `<option value="${st.code}" ${st.code.toUpperCase() === selectedStamp.toUpperCase() ? 'selected' : ''}>${st.code} (${st.hours}h)</option>`
+      ).join('');
+    }
+
+    function appendAddButtonToContainer() {
+      const container = document.getElementById('shortcutPairsContainer');
+      if (!container) return;
+      const existingBtn = document.getElementById('btnBoxAddPair');
+      if (existingBtn) existingBtn.remove();
+      
+      const addBtn = document.createElement('button');
+      addBtn.type = 'button';
+      addBtn.id = 'btnBoxAddPair';
+      addBtn.className = 'btn-add-pair-box';
+      addBtn.onclick = () => addShortcutPair('', 'WO');
+      addBtn.title = 'Add another date box';
+      addBtn.innerHTML = '<span style="font-size: 20px;">➕</span><span>Add Date</span>';
+      container.appendChild(addBtn);
+    }
+
+    function addShortcutPair(dayVal = '', stampVal = 'WO') {
+      pairIdCounter++;
+      const pairId = 'pair_' + pairIdCounter;
+      const container = document.getElementById('shortcutPairsContainer');
+      if (!container) return;
+      const addBtn = document.getElementById('btnBoxAddPair');
+      
+      const div = document.createElement('div');
+      div.className = 'shortcut-pair';
+      div.id = pairId;
+      div.innerHTML = `
+        <button type="button" class="btn-remove-pair" onclick="removeShortcutPair('${pairId}')" title="Remove this date">✕</button>
+        <div class="pair-box">
+          <label class="pair-box-label">Date (1-${currentMonthDays})</label>
+          <input type="number" class="pair-date-input" min="1" max="${currentMonthDays}" placeholder="e.g. 5" value="${dayVal}">
+        </div>
+        <div class="pair-box">
+          <label class="pair-box-label">Stamp</label>
+          <select class="pair-stamp-select">
+            ${getStampSelectOptions(stampVal)}
+          </select>
+        </div>
+      `;
+      
+      if (addBtn && addBtn.parentNode === container) {
+        container.insertBefore(div, addBtn);
+      } else {
+        container.appendChild(div);
+        appendAddButtonToContainer();
+      }
+    }
+
+    function removeShortcutPair(pairId) {
+      const el = document.getElementById(pairId);
+      if (el) el.remove();
+    }
+
+    function resetShortcutForm() {
+      clearSelectedEmployee();
+      const container = document.getElementById('shortcutPairsContainer');
+      if (!container) return;
+      container.innerHTML = '';
+      for (let i = 0; i < 4; i++) {
+        addShortcutPair('', 'WO');
+      }
+      appendAddButtonToContainer();
+      const statusEl = document.getElementById('shortcutStatusMsg');
+      if (statusEl) statusEl.innerText = '';
+    }
+
+    async function submitShortcutEntry() {
+      const assocId = parseInt(document.getElementById('shortcutSelectedAssocId').value);
+      if (!assocId || isNaN(assocId)) {
+        alert('Please search and select an employee first (type at least 2 letters in the search box).');
+        document.getElementById('shortcutEmpSearch').focus();
+        return;
+      }
+      
+      const y = parseInt(document.getElementById('selYear').value);
+      const m = parseInt(document.getElementById('selMonth').value);
+      
+      const pairs = document.querySelectorAll('#shortcutPairsContainer .shortcut-pair');
+      const entries = [];
+      let hasError = false;
+      
+      pairs.forEach(pair => {
+        const dateInput = pair.querySelector('.pair-date-input');
+        const stampSelect = pair.querySelector('.pair-stamp-select');
+        const rawVal = (dateInput.value || '').trim();
+        if (rawVal) {
+          const d = parseInt(rawVal);
+          if (isNaN(d) || d < 1 || d > currentMonthDays) {
+            alert(`Invalid date "${rawVal}". Day must be between 1 and ${currentMonthDays}.`);
+            dateInput.focus();
+            hasError = true;
+            return;
+          }
+          entries.push({ day: d, stamp: stampSelect.value });
+        }
+      });
+      
+      if (hasError) return;
+      
+      const statusEl = document.getElementById('shortcutStatusMsg');
+      statusEl.style.color = '#0284c7';
+      statusEl.innerText = 'Saving entry to sheet...';
+      
+      try {
+        const res = await fetch('/api/month/quick-entry', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            year: y,
+            month: m,
+            assoc_id: assocId,
+            entries: entries
+          })
+        });
+        const result = await res.json();
+        if (result.success) {
+          statusEl.style.color = '#10b981';
+          statusEl.innerText = '✓ Saved! Refreshing sheet...';
+          window.location.reload();
+        } else {
+          statusEl.style.color = '#ef4444';
+          statusEl.innerText = 'Error: ' + (result.detail || result.message || 'Could not save');
+        }
+      } catch (err) {
+        statusEl.style.color = '#ef4444';
+        statusEl.innerText = 'Network error: ' + err;
+      }
+    }
+
+    async function removeAssociateFromMonth(assocId, name) {
+      if (!confirm(`Remove "${name}" from this month's report?\n(They will stay in the master employee list and can be re-entered anytime)`)) {
+        return;
+      }
+      const y = parseInt(document.getElementById('selYear').value);
+      const m = parseInt(document.getElementById('selMonth').value);
+      
+      try {
+        const res = await fetch('/api/month/remove-associate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            year: y,
+            month: m,
+            assoc_id: assocId
+          })
+        });
+        const result = await res.json();
+        if (result.success) {
+          window.location.reload();
+        } else {
+          alert('Error removing associate: ' + (result.detail || result.message || 'Unknown error'));
+        }
+      } catch (err) {
+        alert('Network error: ' + err);
+      }
+    }
+
+    // Auto-initialize 4 default pairs on page load
+    setTimeout(resetShortcutForm, 50);
+
     async function saveChanges() {
       const y = document.getElementById('selYear').value;
       const m = document.getElementById('selMonth').value;
       const payload = [];
-      document.querySelectorAll('#attendanceTable tbody tr').forEach(row => {
+      document.querySelectorAll('#attendanceTable tbody tr[data-assoc-id]').forEach(row => {
         const id = parseInt(row.getAttribute('data-assoc-id'));
         const days = Array.from(row.querySelectorAll('.day-cell')).map(c => c.innerText.trim());
-        payload.push({ id, days });
+        if (!isNaN(id)) {
+          payload.push({ id, days });
+        }
       });
 
       try {

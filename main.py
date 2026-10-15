@@ -103,8 +103,10 @@ def read_month_file(year: int, month: int) -> Optional[Dict[str, Any]]:
             print(f"Warning reading month file: {e}")
     return None
 
-def write_month_file(year: int, month: int, data: Dict[str, Any]):
+def write_month_file(year: int, month: int, data: Any):
     path = get_month_file_path(year, month)
+    if isinstance(data, list):
+        data = {"associates": data}
     with open(path, 'w', encoding='utf-8') as f:
         json.dump(data, f, indent=2, ensure_ascii=False)
 
@@ -117,28 +119,23 @@ def get_month_data(year: int, month: int):
     days_cnt = month_info["days_in_month"]
     
     saved_content = read_month_file(year, month)
-    saved_days_map = {}
+    active_associates = []
     if saved_content:
         raw_list = saved_content.get("associates", []) if isinstance(saved_content, dict) else saved_content
         if isinstance(raw_list, list):
             for item in raw_list:
                 aid = item.get("id")
                 if aid is not None:
-                    saved_days_map[aid] = item.get("days", [])
-                
-    active_associates = []
-    for assoc in all_associates:
-        a_id = assoc["id"]
-        if a_id in saved_days_map and len(saved_days_map[a_id]) == days_cnt:
-            days = saved_days_map[a_id]
-        else:
-            days = generate_default_days(days_cnt, off_days_count=4, seed_offset=a_id * 7 + month)
-            
-        totals = calculate_totals(days, stamps_list=stamps)
-        item = dict(assoc)
-        item["days"] = days
-        item.update(totals)
-        active_associates.append(item)
+                    assoc = next((a for a in all_associates if a["id"] == aid), None)
+                    if assoc:
+                        days = item.get("days", [])
+                        if len(days) != days_cnt:
+                            days = (list(days) + ["8"] * days_cnt)[:days_cnt]
+                        totals = calculate_totals(days, stamps_list=stamps)
+                        entry = dict(assoc)
+                        entry["days"] = days
+                        entry.update(totals)
+                        active_associates.append(entry)
         
     # Grouped reports for active associates
     groups_dict = {}
@@ -245,6 +242,66 @@ async def save_month_endpoint(
 ):
     write_month_file(year, month, payload)
     return {"success": True, "message": f"Saved attendance for {year}-{month:02d}"}
+
+# ================= Quick Schedule Entry & Month Roster Endpoints =================
+
+@app.post("/api/month/quick-entry")
+async def month_quick_entry(payload: Dict[str, Any] = Body(...)):
+    year = int(payload.get("year", 2026))
+    month = int(payload.get("month", 10))
+    assoc_id = payload.get("assoc_id")
+    if assoc_id is None:
+        raise HTTPException(status_code=400, detail="Associate ID is required")
+    assoc_id = int(assoc_id)
+    
+    entries = payload.get("entries", [])
+    month_info = get_month_info(year, month)
+    days_cnt = month_info["days_in_month"]
+    
+    # All days default to "8"
+    days = ["8"] * days_cnt
+    for e in entries:
+        try:
+            d = int(e.get("day", 0))
+            st = str(e.get("stamp", "WO")).strip().upper()
+            if 1 <= d <= days_cnt and st:
+                days[d - 1] = st
+        except (ValueError, TypeError):
+            continue
+            
+    saved_content = read_month_file(year, month) or {}
+    raw_list = saved_content.get("associates", []) if isinstance(saved_content, dict) else (saved_content or [])
+    
+    updated = False
+    new_list = []
+    for item in raw_list:
+        if item.get("id") == assoc_id:
+            new_list.append({"id": assoc_id, "days": days})
+            updated = True
+        else:
+            new_list.append(item)
+            
+    if not updated:
+        new_list.append({"id": assoc_id, "days": days})
+        
+    write_month_file(year, month, {"associates": new_list})
+    return {"success": True, "message": "Associate schedule saved to sheet"}
+
+@app.post("/api/month/remove-associate")
+async def month_remove_associate(payload: Dict[str, Any] = Body(...)):
+    year = int(payload.get("year", 2026))
+    month = int(payload.get("month", 10))
+    assoc_id = payload.get("assoc_id")
+    if assoc_id is None:
+        raise HTTPException(status_code=400, detail="Associate ID is required")
+    assoc_id = int(assoc_id)
+    
+    saved_content = read_month_file(year, month) or {}
+    raw_list = saved_content.get("associates", []) if isinstance(saved_content, dict) else (saved_content or [])
+    
+    new_list = [item for item in raw_list if item.get("id") != assoc_id]
+    write_month_file(year, month, {"associates": new_list})
+    return {"success": True, "message": "Associate removed from this month's sheet"}
 
 # ================= Configuration & Master Data Endpoints =================
 
@@ -488,6 +545,8 @@ async def export_master_excel(
     month: int = Query(default=10)
 ):
     data = get_month_data(year, month)
+    if not data["active_associates"]:
+        raise HTTPException(status_code=400, detail="No associates on this month's report yet.")
     filename = f"Attendance All in Excel-{data['month_info']['month_short']}-{year}.xlsx"
     file_path = os.path.join(EXPORTS_DIR, filename)
     
@@ -507,6 +566,8 @@ async def export_pdfs_zip(
     month: int = Query(default=10)
 ):
     data = get_month_data(year, month)
+    if not data["active_associates"]:
+        raise HTTPException(status_code=400, detail="No associates on this month's report yet.")
     zip_buffer = io.BytesIO()
     with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as z:
         for idx, g in enumerate(data["groups"], start=1):
@@ -541,6 +602,8 @@ async def export_excels_zip(
     month: int = Query(default=10)
 ):
     data = get_month_data(year, month)
+    if not data["active_associates"]:
+        raise HTTPException(status_code=400, detail="No associates on this month's report yet.")
     zip_buffer = io.BytesIO()
     with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as z:
         master_name = f"Attendance All in Excel-{data['month_info']['month_short']}-{year}.xlsx"
@@ -579,6 +642,8 @@ async def export_all_zip(
     month: int = Query(default=10)
 ):
     data = get_month_data(year, month)
+    if not data["active_associates"]:
+        raise HTTPException(status_code=400, detail="No associates on this month's report yet.")
     zip_buffer = io.BytesIO()
     with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as z:
         master_name = f"Attendance All in Excel-{data['month_info']['month_short']}-{year}.xlsx"
