@@ -4,6 +4,7 @@ import secrets
 import hashlib
 import hmac
 import time
+import re
 from typing import Optional, Dict, Any, List
 
 DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'data')
@@ -117,22 +118,53 @@ def list_users_safe() -> List[Dict[str, Any]]:
         })
     return safe
 
+def get_department_workspace(department_name: str, fallback_username: str = "") -> str:
+    dept_clean = (department_name or '').strip()
+    if not dept_clean:
+        return fallback_username or "default"
+        
+    users = load_users()
+    # 1. Match against existing users' departments (case-insensitive)
+    for u in users:
+        u_dept = (u.get("department") or '').strip()
+        if u_dept.lower() == dept_clean.lower():
+            ws = u.get("workspace")
+            if ws and ws not in ["default", "admin"]:
+                return ws
+                
+    # 2. Check if a department workspace folder already exists
+    slug = re.sub(r'[^a-zA-Z0-9]+', '_', dept_clean.lower()).strip('_')
+    if slug:
+        cand_ws = f"dept_{slug}"
+        if os.path.exists(os.path.join(DATA_DIR, "workspaces", cand_ws)):
+            return cand_ws
+        return cand_ws
+        
+    return fallback_username or "default"
+
 def list_workspaces() -> List[Dict[str, Any]]:
     users = load_users()
     ws_map = {}
-    ws_map["default"] = {
-        "id": "default",
-        "name": "Shajjad Khan",
-        "department": "Hotel Engineering"
-    }
     for u in users:
+        if u.get("role") == "admin" or u.get("username") in ["shajjad", "admin"]:
+            continue
         ws = u.get("workspace", u.get("username"))
-        if ws and ws != "default":
+        dept = u.get("department", "General Department")
+        if not ws or ws in ["default", "admin"]:
+            continue
+        display_name = u.get("name") or u.get("username")
+        if ws not in ws_map:
             ws_map[ws] = {
                 "id": ws,
-                "name": u.get("name", u.get("username")),
-                "department": u.get("department", "Department")
+                "department": dept,
+                "name": display_name,
+                "members": [display_name],
+                "usernames": [u.get("username")]
             }
+        else:
+            if display_name not in ws_map[ws]["members"]:
+                ws_map[ws]["members"].append(display_name)
+                ws_map[ws]["usernames"].append(u.get("username"))
     return list(ws_map.values())
 
 def init_workspace(workspace: str, department_name: str = "General Department"):
@@ -190,36 +222,44 @@ def create_or_update_user(
         
     users = load_users()
     existing = next((u for u in users if u.get("username", "").lower() == uname), None)
+    dept_clean = (department or '').strip() or "General Department"
     
     if existing:
         existing["name"] = name.strip() or existing.get("name", uname)
-        existing["department"] = department.strip() or existing.get("department", "General")
+        existing["department"] = dept_clean
         if role:
             existing["role"] = role
         if password and password.strip():
             salt, pw_hash = hash_password(password.strip())
             existing["salt"] = salt
             existing["password_hash"] = pw_hash
+            
+        # Re-resolve shared department workspace
+        shared_ws = get_department_workspace(dept_clean, fallback_username=existing.get("workspace", uname))
+        existing["workspace"] = shared_ws
+        init_workspace(shared_ws, department_name=dept_clean)
         user_rec = existing
     else:
         if not password or not password.strip():
             raise ValueError("Password is required for new user creation")
         salt, pw_hash = hash_password(password.strip())
-        workspace = uname
+        
+        # Connect to existing department workspace if another colleague already exists in this department
+        shared_ws = get_department_workspace(dept_clean, fallback_username=uname)
         user_rec = {
             "username": uname,
             "name": name.strip() or uname.capitalize(),
-            "department": department.strip() or "General Department",
+            "department": dept_clean,
             "role": role or "user",
-            "workspace": workspace,
+            "workspace": shared_ws,
             "salt": salt,
             "password_hash": pw_hash,
             "is_active": True
         }
         users.append(user_rec)
         
-        # Initialize blank isolated workspace for the new user
-        init_workspace(workspace, department_name=user_rec["department"])
+        # Initialize workspace if it didn't exist yet
+        init_workspace(shared_ws, department_name=dept_clean)
         
     save_users(users)
     return {

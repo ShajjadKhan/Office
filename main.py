@@ -392,7 +392,12 @@ async def dashboard_view(
     active_ws = get_current_workspace(request)
     if is_admin:
         if ws and ws.strip():
-            active_ws = ws.strip()
+            target = ws.strip()
+            target_u = get_user(target)
+            if target_u and target_u.get("workspace"):
+                active_ws = target_u["workspace"]
+            else:
+                active_ws = target
         else:
             cookie_ws = request.cookies.get("ow_active_ws")
             if cookie_ws and cookie_ws.strip() and cookie_ws.strip() not in ["default", "shajjad"]:

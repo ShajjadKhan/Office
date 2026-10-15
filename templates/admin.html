@@ -429,7 +429,15 @@
             <div class="form-row">
               <div class="form-group">
                 <label>Department Name *</label>
-                <input type="text" id="newDept" class="form-control" placeholder="e.g. MEA HK, Front Office, Finance" required autocomplete="off">
+                <input type="text" id="newDept" class="form-control" placeholder="Select existing or type new department" list="existingDeptsList" required autocomplete="off">
+                <datalist id="existingDeptsList">
+                  {% for ws in workspaces_list %}
+                    <option value="{{ ws.department }}">{{ ws.department }} (Team: {{ ws.members|join(', ') }})</option>
+                  {% endfor %}
+                </datalist>
+                <span style="font-size: 11px; color: #64748b; margin-top: 4px; display: block;">
+                  💡 Selecting an existing department (e.g. <strong>MEA HK</strong>) connects this user to the same shared staff & timesheet.
+                </span>
               </div>
               <div class="form-group">
                 <label>Password *</label>
@@ -438,7 +446,7 @@
             </div>
 
             <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center; padding: 10px; font-weight: 700;">
-              ➕ Create User & Blank Department Workspace
+              ➕ Create User & Assign Department Workspace
             </button>
           </form>
         </div>
@@ -606,15 +614,18 @@
         </div>
       </div>
 
-      <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 14px;">
+      <div id="workspacesContainer" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 14px;">
         {% for ws in workspaces_list %}
         <div class="item-card" style="padding: 14px 16px;">
           <div>
             <h4 style="font-size: 15px; margin-bottom: 2px;">🏢 {{ ws.department }}</h4>
-            <p style="font-size: 12px; color: var(--text-muted);">Manager Account: <strong style="color: #0f172a;">{{ ws.name or ws.id }}</strong> (ID: <code>{{ ws.id }}</code>)</p>
+            <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 3px;">
+              Colleagues ({{ ws.members|length }}): <strong style="color: #0f172a;">{{ ws.members|join(', ') }}</strong>
+            </p>
+            <p style="font-size: 11px; color: #64748b; margin: 0;">Shared Workspace ID: <code>{{ ws.id }}</code></p>
           </div>
           <a href="/?ws={{ ws.id }}" class="btn btn-outline btn-sm" style="color: #4f46e5; border-color: #c7d2fe; font-weight: 700; white-space: nowrap;">
-            👁️ Inspect Timesheet
+            👁️ Inspect Shared Timesheet
           </a>
         </div>
         {% else %}
@@ -671,16 +682,48 @@
         const data = await res.json();
         if (data.success && data.users) {
           renderUsers(data.users);
+          if (data.workspaces) renderWorkspaces(data.workspaces);
           document.getElementById('formCreateUser').reset();
-          showToast(`✓ User "${username}" & blank department "${department}" created!`);
-          if (data.workspaces) {
-            document.getElementById('statDeptCount').innerText = data.workspaces.length;
-          }
+          showToast(`✓ Colleague "${username}" added to department "${department}"!`);
         } else {
           showToast('Error: ' + (data.detail || 'Could not create user'), 'error');
         }
       } catch (err) {
         showToast('Network error: ' + err, 'error');
+      }
+    }
+
+    function renderWorkspaces(workspaces) {
+      const container = document.getElementById('workspacesContainer');
+      const datalist = document.getElementById('existingDeptsList');
+      if (workspaces && datalist) {
+        datalist.innerHTML = workspaces.map(ws => `
+          <option value="${escapeHtml(ws.department)}">${escapeHtml(ws.department)} (Team: ${escapeHtml((ws.members || []).join(', '))})</option>
+        `).join('');
+      }
+      if (!container || !workspaces) return;
+      document.getElementById('statDeptCount').innerText = workspaces.length;
+      if (!workspaces.length) {
+        container.innerHTML = `
+          <div style="grid-column: 1 / -1; text-align: center; padding: 24px; color: var(--text-muted); background: #f8fafc; border: 1.5px dashed #cbd5e1; border-radius: 8px;">
+            No department workspaces created yet. Use the Create Colleague Account form above to add your first department!
+          </div>
+        `;
+      } else {
+        container.innerHTML = workspaces.map(ws => `
+          <div class="item-card" style="padding: 14px 16px;">
+            <div>
+              <h4 style="font-size: 15px; margin-bottom: 2px;">🏢 ${escapeHtml(ws.department)}</h4>
+              <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 3px;">
+                Colleagues (${(ws.members || []).length}): <strong style="color: #0f172a;">${escapeHtml((ws.members || []).join(', '))}</strong>
+              </p>
+              <p style="font-size: 11px; color: #64748b; margin: 0;">Shared Workspace ID: <code>${escapeHtml(ws.id)}</code></p>
+            </div>
+            <a href="/?ws=${encodeURIComponent(ws.id)}" class="btn btn-outline btn-sm" style="color: #4f46e5; border-color: #c7d2fe; font-weight: 700; white-space: nowrap;">
+              👁️ Inspect Shared Timesheet
+            </a>
+          </div>
+        `).join('');
       }
     }
 
@@ -705,7 +748,7 @@
           </div>
           <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
             ${(u.username !== 'shajjad' && u.username !== 'admin') ? `
-              <a href="/?ws=${encodeURIComponent(u.username)}" class="btn btn-outline btn-sm" style="color: #4f46e5; border-color: #c7d2fe; font-weight: 700;" title="Inspect their attendance sheet">
+              <a href="/?ws=${encodeURIComponent(u.workspace || u.username)}" class="btn btn-outline btn-sm" style="color: #4f46e5; border-color: #c7d2fe; font-weight: 700;" title="Inspect department timesheet">
                 👁️ Inspect Timesheet
               </a>
               <button type="button" class="btn btn-outline btn-sm" onclick="promptResetPassword('${escapeHtml(u.username)}')" title="Reset Password">
@@ -765,10 +808,8 @@
         const data = await res.json();
         if (data.success && data.users) {
           renderUsers(data.users);
+          if (data.workspaces) renderWorkspaces(data.workspaces);
           showToast(`✓ Account "${username}" deleted`);
-          if (data.workspaces) {
-            document.getElementById('statDeptCount').innerText = data.workspaces.length;
-          }
         }
       } catch (err) {
         showToast('Error: ' + err, 'error');
