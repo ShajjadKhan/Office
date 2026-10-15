@@ -21,6 +21,14 @@ from services.auth_service import (
     get_session_user,
     revoke_session,
     get_or_create_api_key,
+    get_user,
+    get_user_role,
+    get_user_workspace,
+    list_users_safe,
+    list_workspaces,
+    create_or_update_user,
+    toggle_user_status,
+    delete_user_account,
     COOKIE_NAME
 )
 
@@ -71,68 +79,115 @@ static_dir = os.path.join(BASE_DIR, 'static')
 if os.path.exists(static_dir):
     app.mount('/static', StaticFiles(directory=static_dir), name='static')
 
-# ================= Data Access Helpers =================
+# ================= Workspace Resolution & Data Access Helpers =================
 
-def load_json(filename: str, default: Any) -> Any:
-    path = os.path.join(DATA_DIR, filename)
+def get_workspace_dir(workspace: str = "default") -> str:
+    if not workspace or workspace in ["default", "shajjad"]:
+        return DATA_DIR
+    ws_dir = os.path.join(DATA_DIR, "workspaces", workspace)
+    os.makedirs(ws_dir, exist_ok=True)
+    os.makedirs(os.path.join(ws_dir, "saved_months"), exist_ok=True)
+    return ws_dir
+
+def get_current_workspace(request: Request) -> str:
+    user = getattr(request.state, "user", None)
+    if not user or user == "api_user":
+        return "default"
+    
+    u = get_user(user)
+    if not u:
+        return "default"
+        
+    is_admin = u.get("role") == "admin" or user in ["shajjad", "admin"]
+    if is_admin:
+        # Admin can view/manage colleague workspaces via query param or switcher cookie
+        ws_param = request.query_params.get("ws")
+        if ws_param and ws_param.strip():
+            return ws_param.strip()
+        cookie_ws = request.cookies.get("ow_active_ws")
+        if cookie_ws and cookie_ws.strip():
+            return cookie_ws.strip()
+        return u.get("workspace", "default")
+    else:
+        # Colleague is strictly isolated to their own department workspace
+        return u.get("workspace", user)
+
+def load_json(filename: str, default: Any, workspace: str = "default") -> Any:
+    ws_dir = get_workspace_dir(workspace)
+    path = os.path.join(ws_dir, filename)
     if os.path.exists(path):
         try:
             with open(path, 'r', encoding='utf-8') as f:
                 return json.load(f)
         except Exception as e:
-            print(f"Error reading {filename}: {e}")
+            print(f"Error reading {filename} in workspace {workspace}: {e}")
     return default
 
-def save_json(filename: str, data: Any):
-    path = os.path.join(DATA_DIR, filename)
+def save_json(filename: str, data: Any, workspace: str = "default"):
+    ws_dir = get_workspace_dir(workspace)
+    os.makedirs(ws_dir, exist_ok=True)
+    path = os.path.join(ws_dir, filename)
     with open(path, 'w', encoding='utf-8') as f:
         json.dump(data, f, indent=2, ensure_ascii=False)
 
-def load_associates() -> List[Dict[str, Any]]:
-    return load_json('associates.json', [])
+def load_associates(workspace: str = "default") -> List[Dict[str, Any]]:
+    return load_json('associates.json', [], workspace=workspace)
 
-def load_companies() -> List[str]:
-    return load_json('companies.json', ["Tamkeen", "Nasim Alenjaz", "Soundline", "Work Force", "Qasir AL Nokba"])
+def load_companies(workspace: str = "default") -> List[str]:
+    return load_json('companies.json', ["Dar Al Ishraq", "Dar Al Wafa", "Nasim Alenjaz", "Sama Al riyadha", "Soundline", "Work Force", "Qasir AL Nokba", "Tamkeen"], workspace=workspace)
 
-def load_properties() -> List[Dict[str, Any]]:
+def load_properties(workspace: str = "default") -> List[Dict[str, Any]]:
     return load_json('properties.json', [
         {"code": "RMH", "name": "Riyadh Marriott Hotel"},
-        {"code": "MEA", "name": "Marriott Executive Apartments"}
-    ])
+        {"code": "MEA", "name": "Marriott Executive Apartments"},
+        {"code": "Housing", "name": "Staff Housing"}
+    ], workspace=workspace)
 
-def load_stamps() -> List[Dict[str, Any]]:
+def load_stamps(workspace: str = "default") -> List[Dict[str, Any]]:
     return load_json('stamps.json', [
-        {"code": "8", "name": "Regular Work", "hours": 8, "bg_color": "#F1F5F9", "text_color": "#334155"},
-        {"code": "WO", "name": "Weekly Off", "hours": 8, "bg_color": "#FEF3C7", "text_color": "#B45309"},
-        {"code": "PH", "name": "Public Holiday", "hours": 8, "bg_color": "#D1FAE5", "text_color": "#065F46"},
-        {"code": "SL", "name": "Sick Leave", "hours": 8, "bg_color": "#E0F2FE", "text_color": "#0369A1"},
-        {"code": "AL", "name": "Annual Leave", "hours": 0, "bg_color": "#E0E7FF", "text_color": "#3730A3"},
-        {"code": "A", "name": "Absent", "hours": 0, "bg_color": "#FEE2E2", "text_color": "#991B1B"},
-        {"code": "V", "name": "Vacation", "hours": 0, "bg_color": "#FFE4E6", "text_color": "#9F1239"}
-    ])
+        {"code": "8", "name": "Regular Shift (8h)", "hours": 8, "bg_color": "#F8FAFC", "text_color": "#334155"},
+        {"code": "WO", "name": "Weekly Off (Paid)", "hours": 8, "bg_color": "#DCFCE7", "text_color": "#166534"},
+        {"code": "PH", "name": "Public Holiday (Paid)", "hours": 8, "bg_color": "#FEF9C3", "text_color": "#854D0E"},
+        {"code": "SL", "name": "Sick Leave (Paid)", "hours": 8, "bg_color": "#FFEDD5", "text_color": "#9A3412"},
+        {"code": "AL", "name": "Annual Leave", "hours": 0, "bg_color": "#FEE2E2", "text_color": "#991B1B"},
+        {"code": "A", "name": "Absent", "hours": 0, "bg_color": "#F3E8FF", "text_color": "#6B21A8"},
+        {"code": "V", "name": "Vacation", "hours": 0, "bg_color": "#CFFAFE", "text_color": "#155E75"}
+    ], workspace=workspace)
 
-def load_authorizers() -> List[Dict[str, Any]]:
+def load_authorizers(workspace: str = "default") -> List[Dict[str, Any]]:
     return load_json('authorizers.json', [
         {"id": 1, "title": "Department Head", "name": "", "is_active": True},
         {"id": 2, "title": "Director of Human Resource", "name": "", "is_active": True},
-        {"id": 3, "title": "Director of Finance", "name": "", "is_active": True}
-    ])
+        {"id": 3, "title": "Director of Finance", "name": "", "is_active": True},
+        {"id": 4, "title": "General Manager", "name": "Eng. Khalid Al-Otaibi", "is_active": True}
+    ], workspace=workspace)
 
-def load_settings() -> Dict[str, Any]:
-    props_list = load_properties()
+def load_settings(workspace: str = "default") -> Dict[str, Any]:
+    custom = load_json('default_settings.json', None, workspace=workspace)
+    if custom and isinstance(custom, dict):
+        return custom
+    props_list = load_properties(workspace=workspace)
     props_map = {p["code"]: p["name"] for p in props_list if isinstance(p, dict)}
+    dept_name = "Hotel Engineering"
+    if workspace not in ["default", "shajjad"]:
+        u = get_user(workspace)
+        if u and u.get("department"):
+            dept_name = u["department"]
     return {
         "properties": props_map,
-        "department_names": {"0430": "Hotel Engineering"}
+        "department_names": {"0430": dept_name}
     }
 
 # ================= Monthly Persistence Helpers =================
 
-def get_month_file_path(year: int, month: int) -> str:
-    return os.path.join(SAVED_DIR, f"{year}_{month:02d}.json")
+def get_month_file_path(year: int, month: int, workspace: str = "default") -> str:
+    ws_dir = get_workspace_dir(workspace)
+    saved_dir = os.path.join(ws_dir, 'saved_months')
+    os.makedirs(saved_dir, exist_ok=True)
+    return os.path.join(saved_dir, f"{year}_{month:02d}.json")
 
-def read_month_file(year: int, month: int) -> Optional[Dict[str, Any]]:
-    path = get_month_file_path(year, month)
+def read_month_file(year: int, month: int, workspace: str = "default") -> Optional[Dict[str, Any]]:
+    path = get_month_file_path(year, month, workspace=workspace)
     if os.path.exists(path):
         try:
             with open(path, 'r', encoding='utf-8') as f:
@@ -145,22 +200,22 @@ def read_month_file(year: int, month: int) -> Optional[Dict[str, Any]]:
             print(f"Warning reading month file: {e}")
     return None
 
-def write_month_file(year: int, month: int, data: Any):
-    path = get_month_file_path(year, month)
+def write_month_file(year: int, month: int, data: Any, workspace: str = "default"):
+    path = get_month_file_path(year, month, workspace=workspace)
     if isinstance(data, list):
         data = {"associates": data}
     with open(path, 'w', encoding='utf-8') as f:
         json.dump(data, f, indent=2, ensure_ascii=False)
 
-def get_month_data(year: int, month: int):
-    all_associates = load_associates()
-    stamps = load_stamps()
-    authorizers = load_authorizers()
-    settings = load_settings()
+def get_month_data(year: int, month: int, workspace: str = "default"):
+    all_associates = load_associates(workspace=workspace)
+    stamps = load_stamps(workspace=workspace)
+    authorizers = load_authorizers(workspace=workspace)
+    settings = load_settings(workspace=workspace)
     month_info = get_month_info(year, month)
     days_cnt = month_info["days_in_month"]
     
-    saved_content = read_month_file(year, month)
+    saved_content = read_month_file(year, month, workspace=workspace)
     active_associates = []
     if saved_content:
         raw_list = saved_content.get("associates", []) if isinstance(saved_content, dict) else saved_content
@@ -190,12 +245,15 @@ def get_month_data(year: int, month: int):
         key = f"{prop}_{comp}".replace(' ', '_').replace('-', '_')
         
         if key not in groups_dict:
+            dept_title = depts.get(assoc.get("department", "0430"))
+            if not dept_title:
+                dept_title = depts.get("0430", "Department")
             groups_dict[key] = {
                 "key": key,
                 "property": prop,
                 "property_full": props.get(prop, f"{prop} Property"),
                 "company": comp,
-                "department": depts.get(assoc.get("department", "0430"), "Hotel Engineering"),
+                "department": dept_title,
                 "associates": []
             }
         groups_dict[key]["associates"].append(assoc)
@@ -211,8 +269,8 @@ def get_month_data(year: int, month: int):
         "groups": groups,
         "settings": settings,
         "stamps": stamps,
-        "companies": load_companies(),
-        "properties": load_properties()
+        "companies": load_companies(workspace=workspace),
+        "properties": load_properties(workspace=workspace)
     }
 
 # ================= Routes & Views =================
@@ -270,6 +328,15 @@ async def login_post(request: Request):
         samesite="lax",
         path="/"
     )
+    user_ws = user.get("workspace", user.get("username", "default"))
+    response.set_cookie(
+        key="ow_active_ws",
+        value=user_ws,
+        max_age=duration * 86400,
+        httponly=False,
+        samesite="lax",
+        path="/"
+    )
     return response
 
 @app.get("/logout")
@@ -279,23 +346,47 @@ async def logout_endpoint(request: Request):
         revoke_session(token)
     response = RedirectResponse(url="/login", status_code=302)
     response.delete_cookie(COOKIE_NAME, path="/")
+    response.delete_cookie("ow_active_ws", path="/")
     return response
 
 @app.get("/", response_class=HTMLResponse)
 async def dashboard_view(
     request: Request,
     year: int = Query(default=2026),
-    month: int = Query(default=10)
+    month: int = Query(default=10),
+    ws: Optional[str] = Query(default=None)
 ):
-    data = get_month_data(year, month)
+    current_username = getattr(request.state, "user", "shajjad")
+    u = get_user(current_username)
+    is_admin = bool(u and (u.get("role") == "admin" or current_username in ["shajjad", "admin"]))
+    
+    active_ws = get_current_workspace(request)
+    if is_admin and ws and ws.strip():
+        active_ws = ws.strip()
+        
+    data = get_month_data(year, month, workspace=active_ws)
     month_names = {i: calendar.month_name[i] for i in range(1, 13)}
     
-    return templates.TemplateResponse(
+    user_display_name = u.get("name", current_username) if u else current_username
+    user_dept = u.get("department", "Hotel Engineering") if u else "Hotel Engineering"
+    
+    ws_list = list_workspaces() if is_admin else []
+    active_ws_info = next((w for w in ws_list if w["id"] == active_ws), None)
+    active_ws_title = active_ws_info["department"] if active_ws_info else user_dept
+    
+    response = templates.TemplateResponse(
         request=request,
         name="index.html",
         context={
             "request": request,
-            "current_user": getattr(request.state, "user", "User"),
+            "current_user": current_username,
+            "current_user_name": user_display_name,
+            "current_user_dept": user_dept,
+            "is_admin": is_admin,
+            "active_workspace": active_ws,
+            "active_workspace_title": active_ws_title,
+            "workspaces_list": ws_list,
+            "all_users": list_users_safe() if is_admin else [],
             "current_year": year,
             "current_month": month,
             "month_info": data["month_info"],
@@ -311,6 +402,9 @@ async def dashboard_view(
             "stamps": data["stamps"]
         }
     )
+    if is_admin and ws and ws.strip():
+        response.set_cookie(key="ow_active_ws", value=active_ws, max_age=30*86400, httponly=False, samesite="lax", path="/")
+    return response
 
 @app.get("/print/{group_key}", response_class=HTMLResponse)
 async def print_report_view(
@@ -319,7 +413,8 @@ async def print_report_view(
     year: int = Query(default=2026),
     month: int = Query(default=10)
 ):
-    data = get_month_data(year, month)
+    ws = get_current_workspace(request)
+    data = get_month_data(year, month, workspace=ws)
     target_group = next((g for g in data["groups"] if g["key"] == group_key), None)
     if not target_group:
         raise HTTPException(status_code=404, detail="Report group not found for this month")
@@ -343,17 +438,20 @@ async def print_report_view(
 
 @app.post("/api/save-month")
 async def save_month_endpoint(
+    request: Request,
     year: int = Query(...),
     month: int = Query(...),
     payload: Any = Body(...)
 ):
-    write_month_file(year, month, payload)
+    ws = get_current_workspace(request)
+    write_month_file(year, month, payload, workspace=ws)
     return {"success": True, "message": f"Saved attendance for {year}-{month:02d}"}
 
 # ================= Quick Schedule Entry & Month Roster Endpoints =================
 
 @app.post("/api/month/quick-entry")
-async def month_quick_entry(payload: Dict[str, Any] = Body(...)):
+async def month_quick_entry(request: Request, payload: Dict[str, Any] = Body(...)):
+    ws = get_current_workspace(request)
     year = int(payload.get("year", 2026))
     month = int(payload.get("month", 10))
     assoc_id = payload.get("assoc_id")
@@ -376,7 +474,7 @@ async def month_quick_entry(payload: Dict[str, Any] = Body(...)):
         except (ValueError, TypeError):
             continue
             
-    saved_content = read_month_file(year, month) or {}
+    saved_content = read_month_file(year, month, workspace=ws) or {}
     raw_list = saved_content.get("associates", []) if isinstance(saved_content, dict) else (saved_content or [])
     
     updated = False
@@ -391,11 +489,12 @@ async def month_quick_entry(payload: Dict[str, Any] = Body(...)):
     if not updated:
         new_list.append({"id": assoc_id, "days": days})
         
-    write_month_file(year, month, {"associates": new_list})
+    write_month_file(year, month, {"associates": new_list}, workspace=ws)
     return {"success": True, "message": "Associate schedule saved to sheet"}
 
 @app.post("/api/month/remove-associate")
-async def month_remove_associate(payload: Dict[str, Any] = Body(...)):
+async def month_remove_associate(request: Request, payload: Dict[str, Any] = Body(...)):
+    ws = get_current_workspace(request)
     year = int(payload.get("year", 2026))
     month = int(payload.get("month", 10))
     assoc_id = payload.get("assoc_id")
@@ -403,28 +502,30 @@ async def month_remove_associate(payload: Dict[str, Any] = Body(...)):
         raise HTTPException(status_code=400, detail="Associate ID is required")
     assoc_id = int(assoc_id)
     
-    saved_content = read_month_file(year, month) or {}
+    saved_content = read_month_file(year, month, workspace=ws) or {}
     raw_list = saved_content.get("associates", []) if isinstance(saved_content, dict) else (saved_content or [])
     
     new_list = [item for item in raw_list if item.get("id") != assoc_id]
-    write_month_file(year, month, {"associates": new_list})
+    write_month_file(year, month, {"associates": new_list}, workspace=ws)
     return {"success": True, "message": "Associate removed from this month's sheet"}
 
 # ================= Configuration & Master Data Endpoints =================
 
 @app.get("/api/config")
-async def get_config():
+async def get_config(request: Request):
+    ws = get_current_workspace(request)
     return {
-        "associates": load_associates(),
-        "companies": load_companies(),
-        "properties": load_properties(),
-        "stamps": load_stamps(),
-        "authorizers": load_authorizers()
+        "associates": load_associates(workspace=ws),
+        "companies": load_companies(workspace=ws),
+        "properties": load_properties(workspace=ws),
+        "stamps": load_stamps(workspace=ws),
+        "authorizers": load_authorizers(workspace=ws)
     }
 
 @app.post("/api/employees")
-async def save_employee(emp: Dict[str, Any] = Body(...)):
-    associates = load_associates()
+async def save_employee(request: Request, emp: Dict[str, Any] = Body(...)):
+    ws = get_current_workspace(request)
+    associates = load_associates(workspace=ws)
     emp_id = emp.get("id")
     if emp_id:
         found = False
@@ -439,41 +540,45 @@ async def save_employee(emp: Dict[str, Any] = Body(...)):
         new_id = max([a.get("id", 0) for a in associates], default=0) + 1
         emp["id"] = new_id
         associates.append(emp)
-    save_json('associates.json', associates)
+    save_json('associates.json', associates, workspace=ws)
     return {"success": True, "employee": emp}
 
 @app.delete("/api/employees/{emp_id}")
-async def delete_employee(emp_id: int):
-    associates = load_associates()
+async def delete_employee(request: Request, emp_id: int):
+    ws = get_current_workspace(request)
+    associates = load_associates(workspace=ws)
     associates = [a for a in associates if a.get("id") != emp_id]
-    save_json('associates.json', associates)
+    save_json('associates.json', associates, workspace=ws)
     return {"success": True, "message": f"Employee #{emp_id} deleted"}
 
 @app.post("/api/companies")
-async def add_company(payload: Dict[str, str] = Body(...)):
+async def add_company(request: Request, payload: Dict[str, str] = Body(...)):
+    ws = get_current_workspace(request)
     name = payload.get("name", "").strip()
     if not name:
         raise HTTPException(status_code=400, detail="Company name required")
-    companies = load_companies()
+    companies = load_companies(workspace=ws)
     if name not in companies:
         companies.append(name)
-        save_json('companies.json', companies)
+        save_json('companies.json', companies, workspace=ws)
     return {"success": True, "companies": companies}
 
 @app.delete("/api/companies/{name}")
-async def delete_company(name: str):
-    companies = load_companies()
+async def delete_company(request: Request, name: str):
+    ws = get_current_workspace(request)
+    companies = load_companies(workspace=ws)
     companies = [c for c in companies if c != name]
-    save_json('companies.json', companies)
+    save_json('companies.json', companies, workspace=ws)
     return {"success": True, "companies": companies}
 
 @app.post("/api/properties")
-async def save_property(prop: Dict[str, str] = Body(...)):
+async def save_property(request: Request, prop: Dict[str, str] = Body(...)):
+    ws = get_current_workspace(request)
     code = prop.get("code", "").strip().upper()
     name = prop.get("name", "").strip()
     if not code or not name:
         raise HTTPException(status_code=400, detail="Code and Name required")
-    properties = load_properties()
+    properties = load_properties(workspace=ws)
     updated = False
     for i, p in enumerate(properties):
         if p.get("code", "").upper() == code:
@@ -482,19 +587,21 @@ async def save_property(prop: Dict[str, str] = Body(...)):
             break
     if not updated:
         properties.append({"code": code, "name": name})
-    save_json('properties.json', properties)
+    save_json('properties.json', properties, workspace=ws)
     return {"success": True, "properties": properties}
 
 @app.delete("/api/properties/{code}")
-async def delete_property(code: str):
+async def delete_property(request: Request, code: str):
+    ws = get_current_workspace(request)
     code = code.strip().upper()
-    properties = load_properties()
+    properties = load_properties(workspace=ws)
     properties = [p for p in properties if p.get("code", "").upper() != code]
-    save_json('properties.json', properties)
+    save_json('properties.json', properties, workspace=ws)
     return {"success": True, "properties": properties}
 
 @app.post("/api/stamps")
-async def save_stamp(stamp: Dict[str, Any] = Body(...)):
+async def save_stamp(request: Request, stamp: Dict[str, Any] = Body(...)):
+    ws = get_current_workspace(request)
     code = str(stamp.get("code", "")).strip().upper()
     name = stamp.get("name", code)
     hours = float(stamp.get("hours", 0))
@@ -504,7 +611,7 @@ async def save_stamp(stamp: Dict[str, Any] = Body(...)):
     if not code:
         raise HTTPException(status_code=400, detail="Stamp code required")
         
-    stamps = load_stamps()
+    stamps = load_stamps(workspace=ws)
     updated = False
     new_stamp = {
         "code": code,
@@ -520,25 +627,28 @@ async def save_stamp(stamp: Dict[str, Any] = Body(...)):
             break
     if not updated:
         stamps.append(new_stamp)
-    save_json('stamps.json', stamps)
+    save_json('stamps.json', stamps, workspace=ws)
     return {"success": True, "stamps": stamps}
 
 @app.delete("/api/stamps/{code}")
-async def delete_stamp(code: str):
+async def delete_stamp(request: Request, code: str):
+    ws = get_current_workspace(request)
     code = code.strip().upper()
-    stamps = load_stamps()
+    stamps = load_stamps(workspace=ws)
     stamps = [s for s in stamps if str(s.get("code", "")).strip().upper() != code]
-    save_json('stamps.json', stamps)
+    save_json('stamps.json', stamps, workspace=ws)
     return {"success": True, "stamps": stamps}
 
 # ================= Authorizers Endpoints =================
 
 @app.get("/api/authorizers")
-async def get_authorizers():
-    return {"success": True, "authorizers": load_authorizers()}
+async def get_authorizers(request: Request):
+    ws = get_current_workspace(request)
+    return {"success": True, "authorizers": load_authorizers(workspace=ws)}
 
 @app.post("/api/authorizers")
-async def save_authorizer(auth: Dict[str, Any] = Body(...)):
+async def save_authorizer(request: Request, auth: Dict[str, Any] = Body(...)):
+    ws = get_current_workspace(request)
     title = auth.get("title", "").strip()
     name = auth.get("name", "").strip()
     is_active = bool(auth.get("is_active", True))
@@ -547,7 +657,7 @@ async def save_authorizer(auth: Dict[str, Any] = Body(...)):
     if not title:
         raise HTTPException(status_code=400, detail="Authorizer title is required")
         
-    authorizers = load_authorizers()
+    authorizers = load_authorizers(workspace=ws)
     if auth_id:
         updated = False
         for i, a in enumerate(authorizers):
@@ -561,12 +671,13 @@ async def save_authorizer(auth: Dict[str, Any] = Body(...)):
         new_id = max([a.get("id", 0) for a in authorizers], default=0) + 1
         authorizers.append({"id": new_id, "title": title, "name": name, "is_active": is_active})
         
-    save_json('authorizers.json', authorizers)
+    save_json('authorizers.json', authorizers, workspace=ws)
     return {"success": True, "authorizers": authorizers}
 
 @app.patch("/api/authorizers/{auth_id}/toggle")
-async def toggle_authorizer(auth_id: int):
-    authorizers = load_authorizers()
+async def toggle_authorizer(request: Request, auth_id: int):
+    ws = get_current_workspace(request)
+    authorizers = load_authorizers(workspace=ws)
     found = False
     for a in authorizers:
         if a.get("id") == auth_id:
@@ -575,25 +686,109 @@ async def toggle_authorizer(auth_id: int):
             break
     if not found:
         raise HTTPException(status_code=404, detail="Authorizer not found")
-    save_json('authorizers.json', authorizers)
+    save_json('authorizers.json', authorizers, workspace=ws)
     return {"success": True, "authorizers": authorizers}
 
 @app.delete("/api/authorizers/{auth_id}")
-async def delete_authorizer(auth_id: int):
-    authorizers = load_authorizers()
+async def delete_authorizer(request: Request, auth_id: int):
+    ws = get_current_workspace(request)
+    authorizers = load_authorizers(workspace=ws)
     authorizers = [a for a in authorizers if a.get("id") != auth_id]
-    save_json('authorizers.json', authorizers)
+    save_json('authorizers.json', authorizers, workspace=ws)
     return {"success": True, "authorizers": authorizers}
+
+# ================= Master Control Panel Endpoints (Admin Only) =================
+
+def require_admin(request: Request) -> Dict[str, Any]:
+    user = getattr(request.state, "user", None)
+    if not user:
+        raise HTTPException(status_code=401, detail="Authentication required")
+    u = get_user(user)
+    if not u or (u.get("role") != "admin" and user not in ["shajjad", "admin"]):
+        raise HTTPException(status_code=403, detail="Administrator permissions required")
+    return u
+
+@app.get("/api/users")
+async def get_all_users(request: Request):
+    require_admin(request)
+    return {"success": True, "users": list_users_safe(), "workspaces": list_workspaces()}
+
+@app.post("/api/users")
+async def create_user_endpoint(request: Request, payload: Dict[str, Any] = Body(...)):
+    require_admin(request)
+    username = payload.get("username", "").strip()
+    name = payload.get("name", "").strip()
+    department = payload.get("department", "").strip()
+    password = payload.get("password", "")
+    role = payload.get("role", "user")
+    
+    if not username:
+        raise HTTPException(status_code=400, detail="Username is required")
+    if not department:
+        raise HTTPException(status_code=400, detail="Department is required")
+        
+    try:
+        user_info = create_or_update_user(
+            username=username,
+            name=name,
+            department=department,
+            password=password,
+            role=role
+        )
+        return {"success": True, "user": user_info, "users": list_users_safe(), "workspaces": list_workspaces()}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to create user: {e}")
+
+@app.patch("/api/users/{target_username}/toggle")
+async def toggle_user_endpoint(request: Request, target_username: str):
+    require_admin(request)
+    try:
+        new_status = toggle_user_status(target_username)
+        return {"success": True, "username": target_username, "is_active": new_status, "users": list_users_safe()}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.delete("/api/users/{target_username}")
+async def delete_user_endpoint(request: Request, target_username: str):
+    require_admin(request)
+    try:
+        delete_user_account(target_username)
+        return {"success": True, "username": target_username, "users": list_users_safe(), "workspaces": list_workspaces()}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.post("/api/switch-workspace")
+async def switch_workspace_endpoint(request: Request, payload: Dict[str, str] = Body(...)):
+    require_admin(request)
+    target_ws = payload.get("workspace", "default").strip()
+    workspaces = [w["id"] for w in list_workspaces()]
+    if target_ws not in workspaces and target_ws not in ["default", "shajjad"]:
+        raise HTTPException(status_code=400, detail="Unknown workspace")
+        
+    response = JSONResponse(content={"success": True, "active_workspace": target_ws})
+    response.set_cookie(
+        key="ow_active_ws",
+        value=target_ws,
+        max_age=30 * 86400,
+        httponly=False,
+        samesite="lax",
+        path="/"
+    )
+    return response
 
 # ================= Export Endpoints =================
 
 @app.get("/api/export/single-pdf/{group_key}")
 async def export_single_pdf(
+    request: Request,
     group_key: str,
     year: int = Query(default=2026),
     month: int = Query(default=10)
 ):
-    data = get_month_data(year, month)
+    ws = get_current_workspace(request)
+    data = get_month_data(year, month, workspace=ws)
     g = next((item for item in data["groups"] if item["key"] == group_key), None)
     if not g:
         raise HTTPException(status_code=404, detail="Group not found for this month")
@@ -619,11 +814,13 @@ async def export_single_pdf(
 
 @app.get("/api/export/single-excel/{group_key}")
 async def export_single_excel(
+    request: Request,
     group_key: str,
     year: int = Query(default=2026),
     month: int = Query(default=10)
 ):
-    data = get_month_data(year, month)
+    ws = get_current_workspace(request)
+    data = get_month_data(year, month, workspace=ws)
     g = next((item for item in data["groups"] if item["key"] == group_key), None)
     if not g:
         raise HTTPException(status_code=404, detail="Group not found for this month")
@@ -648,10 +845,12 @@ async def export_single_excel(
 
 @app.get("/api/export/master-excel")
 async def export_master_excel(
+    request: Request,
     year: int = Query(default=2026),
     month: int = Query(default=10)
 ):
-    data = get_month_data(year, month)
+    ws = get_current_workspace(request)
+    data = get_month_data(year, month, workspace=ws)
     if not data["active_associates"]:
         raise HTTPException(status_code=400, detail="No associates on this month's report yet.")
     filename = f"Attendance All in Excel-{data['month_info']['month_short']}-{year}.xlsx"
@@ -669,10 +868,12 @@ async def export_master_excel(
 
 @app.get("/api/export/pdfs-zip")
 async def export_pdfs_zip(
+    request: Request,
     year: int = Query(default=2026),
     month: int = Query(default=10)
 ):
-    data = get_month_data(year, month)
+    ws = get_current_workspace(request)
+    data = get_month_data(year, month, workspace=ws)
     if not data["active_associates"]:
         raise HTTPException(status_code=400, detail="No associates on this month's report yet.")
     zip_buffer = io.BytesIO()
@@ -705,10 +906,12 @@ async def export_pdfs_zip(
 
 @app.get("/api/export/excels-zip")
 async def export_excels_zip(
+    request: Request,
     year: int = Query(default=2026),
     month: int = Query(default=10)
 ):
-    data = get_month_data(year, month)
+    ws = get_current_workspace(request)
+    data = get_month_data(year, month, workspace=ws)
     if not data["active_associates"]:
         raise HTTPException(status_code=400, detail="No associates on this month's report yet.")
     zip_buffer = io.BytesIO()
@@ -745,10 +948,12 @@ async def export_excels_zip(
 
 @app.get("/api/export/all-zip")
 async def export_all_zip(
+    request: Request,
     year: int = Query(default=2026),
     month: int = Query(default=10)
 ):
-    data = get_month_data(year, month)
+    ws = get_current_workspace(request)
+    data = get_month_data(year, month, workspace=ws)
     if not data["active_associates"]:
         raise HTTPException(status_code=400, detail="No associates on this month's report yet.")
     zip_buffer = io.BytesIO()

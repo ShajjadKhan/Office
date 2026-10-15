@@ -4,13 +4,19 @@
     "name": "Shajjad Khan",
     "salt": "478ffb02227bff087e9501fcf3abd8fd",
     "password_hash": "43ca1cba9e399addb095c65488e9bdf1aa9b6158f6bb9458d44366d158cc5773",
-    "is_active": true
+    "is_active": true,
+    "role": "admin",
+    "workspace": "default",
+    "department": "Hotel Engineering"
   },
   {
     "username": "admin",
     "name": "Administrator",
     "salt": "eb5360f56231684bd7a24932007a5301",
     "password_hash": "d100eef4e6b6b50ef7f908f0cd852127bb7172d414003c320abf28ec3f027290",
-    "is_active": true
+    "is_active": true,
+    "role": "admin",
+    "workspace": "default",
+    "department": "Hotel Engineering"
   }
 ]

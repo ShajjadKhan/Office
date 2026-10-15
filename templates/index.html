@@ -810,6 +810,27 @@
       </div>
 
       <div class="month-controls">
+        {% if is_admin and workspaces_list|length > 0 %}
+        <!-- Department Switcher Dropdown (Admin) -->
+        <div style="display: inline-flex; align-items: center; gap: 6px; background: #eff6ff; border: 1.5px solid #bfdbfe; padding: 3px 8px; border-radius: 8px;">
+          <span style="font-size: 11px; font-weight: 800; color: #1e40af; text-transform: uppercase;">🏢 Department:</span>
+          <select id="selWorkspace" onchange="switchWorkspace(this.value)" style="border: none; background: transparent; font-weight: 700; color: #1d4ed8; padding: 3px; cursor: pointer; outline: none; font-size: 13px;">
+            {% for ws in workspaces_list %}
+              <option value="{{ ws.id }}" {% if ws.id == active_workspace %}selected{% endif %}>
+                {{ ws.department }} ({{ ws.name }})
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+        <button class="btn btn-outline btn-sm" onclick="openDrawer('master-control')" style="background: #faf5ff; border-color: #ddd6fe; color: #6d28d9; font-weight: 700; padding: 6px 10px;">
+          👑 Master Control
+        </button>
+        {% elif not is_admin %}
+        <div style="display: inline-flex; align-items: center; gap: 6px; background: #f0fdf4; border: 1px solid #bbf7d0; padding: 5px 12px; border-radius: 8px;">
+          <span style="font-size: 12px; font-weight: 800; color: #166534;">🏢 {{ current_user_dept }}</span>
+        </div>
+        {% endif %}
+
         <label style="font-size: 13px; font-weight: 600; color: var(--text-muted);">Period:</label>
         <select id="selYear" onchange="loadMonthData()">
           <option value="2026" selected>2026</option>
@@ -825,7 +846,7 @@
         <button class="btn btn-primary" onclick="saveChanges()">💾 Save Month</button>
         <div style="display: inline-flex; align-items: center; gap: 8px; margin-left: 8px; padding-left: 10px; border-left: 1.5px solid var(--border);">
           <span style="font-size: 12px; font-weight: 700; color: #334155; background: #f1f5f9; border: 1px solid #cbd5e1; padding: 5px 10px; border-radius: 6px;">
-            👤 {{ current_user }}
+            👤 {{ current_user_name }} {% if is_admin %}<span style="font-size: 10px; font-weight: 800; background: #ede9fe; color: #6d28d9; padding: 1px 5px; border-radius: 4px; margin-left: 3px;">ADMIN</span>{% endif %}
           </span>
           <a href="/logout" class="btn btn-outline btn-sm" style="padding: 5px 10px; font-size: 12px; font-weight: 700; color: #dc2626; border-color: #fca5a5; text-decoration: none;">
             🚪 Sign Out
@@ -833,6 +854,23 @@
         </div>
       </div>
     </header>
+
+    {% if is_admin and active_workspace != 'default' %}
+    <!-- Active Workspace Banner for Admin -->
+    <div style="background: #f5f3ff; border: 1.5px solid #c4b5fd; border-radius: 10px; padding: 12px 18px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <span style="font-size: 20px;">🏢</span>
+        <div>
+          <strong style="color: #6d28d9; font-size: 14px;">Viewing Department Panel: {{ active_workspace_title }}</strong>
+          <span style="font-size: 12px; color: #7c3aed; margin-left: 8px;">(Workspace: <code>{{ active_workspace }}</code>)</span>
+          <p style="font-size: 12px; color: #6b7280; margin: 0;">You are currently inspecting and managing this colleague's department attendance roster, staff, and stamps.</p>
+        </div>
+      </div>
+      <button class="btn btn-outline btn-sm" onclick="switchWorkspace('default')" style="background: #fff; border-color: #a78bfa; color: #6d28d9; font-weight: 700;">
+        🔙 Return to My Hotel Engineering Panel
+      </button>
+    </div>
+    {% endif %}
 
     <!-- Dynamic Legend Bar -->
     <div class="legend-bar">
@@ -1047,6 +1085,9 @@
       <div class="drawer-tab" onclick="switchTab('companies')">🏢 Companies</div>
       <div class="drawer-tab" onclick="switchTab('properties')">🏨 Properties</div>
       <div class="drawer-tab" onclick="switchTab('stamps')">🏷️ Stamps & Hours</div>
+      {% if is_admin %}
+      <div class="drawer-tab" id="drawerTabMaster" style="color: #7c3aed; font-weight: 800; border-left: 1px solid #e2e8f0; background: #faf5ff;" onclick="switchTab('master-control')">👑 Master Control Panel</div>
+      {% endif %}
     </div>
 
     <div class="drawer-body">
@@ -1264,6 +1305,107 @@
           </div>
         </div>
       </div>
+
+      {% if is_admin %}
+      <!-- TAB 6: MASTER CONTROL PANEL -->
+      <div class="tab-content" id="tab-master-control">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; padding-bottom: 10px; border-bottom: 1.5px solid #ede9fe;">
+          <div>
+            <h3 style="font-size: 15px; font-weight: 800; color: #6d28d9; margin-bottom: 3px;">👑 Master Control Panel</h3>
+            <p style="font-size: 12px; color: var(--text-muted);">Create colleague user accounts with isolated blank panels, or manage all department workspaces.</p>
+          </div>
+          <span style="font-size: 11px; font-weight: 800; background: #ede9fe; color: #6d28d9; padding: 4px 10px; border-radius: 6px;">
+            ADMINISTRATOR
+          </span>
+        </div>
+
+        <!-- Add Colleague Form -->
+        <div style="background: #fbfbfe; border: 1.5px solid #ddd6fe; border-radius: 10px; padding: 16px; margin-bottom: 20px;">
+          <h4 style="font-size: 13px; font-weight: 800; color: #5b21b6; margin-bottom: 12px;">➕ Add Department Colleague Account</h4>
+          
+          <div class="form-row">
+            <div class="form-group">
+              <label>Username (Login ID) *</label>
+              <input type="text" id="newUsername" class="form-control" placeholder="e.g. laundry, frontoffice, hk">
+            </div>
+            <div class="form-group">
+              <label>Colleague Full Name *</label>
+              <input type="text" id="newFullName" class="form-control" placeholder="e.g. Ahmed Al-Otaibi">
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>Department Name *</label>
+              <input type="text" id="newDepartment" class="form-control" placeholder="e.g. Laundry, Front Office, Housekeeping">
+            </div>
+            <div class="form-group">
+              <label>Initial Password *</label>
+              <input type="text" id="newPassword" class="form-control" placeholder="Create login password">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Access Role</label>
+            <select id="newRole" class="form-control">
+              <option value="user" selected>Colleague (Private Isolated Department Panel)</option>
+              <option value="admin">Administrator (Master Control Panel Access)</option>
+            </select>
+          </div>
+
+          <button id="btnCreateUser" class="btn btn-primary" onclick="submitCreateUser()" style="width: 100%; justify-content: center; background: #7c3aed; padding: 10px 16px; font-size: 13px;">
+            ✨ Create User & Initialize Blank Workspace
+          </button>
+          <p style="font-size: 11px; color: #6b7280; margin-top: 8px; text-align: center; line-height: 1.4;">
+            ℹ️ New colleagues log in to an independent, blank attendance panel where they create their own staff and stamps. Existing Hotel Engineering data is completely untouched.
+          </p>
+        </div>
+
+        <!-- Registered Colleagues Table -->
+        <div class="item-list">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+            <h4 style="font-size: 13px; font-weight: 800; color: #0f172a;">Registered Users & Department Workspaces</h4>
+            <button class="btn btn-outline btn-sm" onclick="reloadUsersList()" style="font-size: 11px; padding: 3px 8px;">🔄 Refresh List</button>
+          </div>
+          <div id="usersListContainer">
+            {% for u in all_users %}
+            <div class="item-card" style="border-left: 4px solid {% if u.role == 'admin' %}#7c3aed{% else %}#2563eb{% endif %}; margin-bottom: 8px;">
+              <div class="item-card-info">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <strong style="font-size: 13px;">{{ u.name }}</strong>
+                  <span style="font-size: 11px; font-family: monospace; color: #64748b;">(@{{ u.username }})</span>
+                  {% if u.role == 'admin' %}
+                    <span style="font-size: 10px; font-weight: 800; background: #ede9fe; color: #6d28d9; padding: 1px 6px; border-radius: 4px;">ADMIN</span>
+                  {% else %}
+                    <span style="font-size: 10px; font-weight: 800; background: #e0f2fe; color: #0369a1; padding: 1px 6px; border-radius: 4px;">COLLEAGUE</span>
+                  {% endif %}
+                  {% if not u.is_active %}
+                    <span style="font-size: 10px; font-weight: 800; background: #fee2e2; color: #991b1b; padding: 1px 6px; border-radius: 4px;">INACTIVE</span>
+                  {% endif %}
+                </div>
+                <p style="margin: 3px 0 0 0; font-size: 12px; color: #475569;">
+                  🏢 <strong>{{ u.department }}</strong> &bull; Workspace: <code style="background: #f1f5f9; padding: 1px 4px; border-radius: 3px;">{{ u.workspace }}</code>
+                </p>
+              </div>
+              <div style="display: flex; gap: 6px; align-items: center;">
+                <button class="btn btn-outline btn-sm" onclick="switchWorkspace('{{ u.workspace }}')" style="font-size: 11px; padding: 4px 8px; font-weight: 700; color: #2563eb; border-color: #bfdbfe;">
+                  👁️ Open Panel
+                </button>
+                {% if u.username not in ['shajjad', 'admin'] %}
+                  <button class="btn btn-outline btn-sm" onclick="toggleUserActive('{{ u.username }}')" style="font-size: 11px; padding: 4px 8px;">
+                    {% if u.is_active %}⏸️ Deactivate{% else %}▶️ Activate{% endif %}
+                  </button>
+                  <button class="btn btn-danger btn-sm" onclick="deleteUserAccount('{{ u.username }}')" style="font-size: 11px; padding: 4px 8px;">
+                    🗑️
+                  </button>
+                {% endif %}
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+      {% endif %}
     </div>
   </div>
 
@@ -1681,7 +1823,12 @@
     function loadMonthData() {
       const y = document.getElementById('selYear').value;
       const m = document.getElementById('selMonth').value;
-      window.location.href = '/?year=' + encodeURIComponent(y) + '&month=' + encodeURIComponent(m);
+      const ws = '{{ active_workspace }}';
+      let url = '/?year=' + encodeURIComponent(y) + '&month=' + encodeURIComponent(m);
+      if (ws && ws !== 'default') {
+        url += '&ws=' + encodeURIComponent(ws);
+      }
+      window.location.href = url;
     }
 
     /* Drawer Controls */
@@ -1700,7 +1847,11 @@
       document.querySelectorAll('.drawer-tab').forEach(t => t.classList.remove('active'));
       document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
       
-      const tabBtn = Array.from(document.querySelectorAll('.drawer-tab')).find(b => b.innerText.toLowerCase().includes(name));
+      const normalized = name.toLowerCase().replace(/[-_]/g, ' ');
+      const tabBtn = Array.from(document.querySelectorAll('.drawer-tab')).find(b => {
+        const text = b.innerText.toLowerCase().replace(/[-_]/g, ' ');
+        return text.includes(normalized) || (b.getAttribute('onclick') || '').includes(name);
+      });
       if (tabBtn) tabBtn.classList.add('active');
       const content = document.getElementById('tab-' + name);
       if (content) content.classList.add('active');
@@ -1942,6 +2093,108 @@
       const data = await res.json();
       if (data.success) {
         window.location.reload();
+      }
+    }
+
+    /* ================= Workspace & Master Control Logic ================= */
+    async function switchWorkspace(wsId) {
+      if (!wsId) return;
+      try {
+        const res = await fetch('/api/switch-workspace', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ workspace: wsId })
+        });
+        const data = await res.json();
+        if (data.success) {
+          const curYear = document.getElementById('selYear').value;
+          const curMonth = document.getElementById('selMonth').value;
+          window.location.href = '/?year=' + curYear + '&month=' + curMonth + '&ws=' + encodeURIComponent(wsId);
+        } else {
+          alert(data.detail || 'Failed to switch workspace');
+        }
+      } catch (e) {
+        alert('Error switching workspace: ' + e);
+      }
+    }
+
+    async function submitCreateUser() {
+      const username = (document.getElementById('newUsername').value || '').trim();
+      const name = (document.getElementById('newFullName').value || '').trim();
+      const department = (document.getElementById('newDepartment').value || '').trim();
+      const password = (document.getElementById('newPassword').value || '').trim();
+      const role = document.getElementById('newRole').value;
+
+      if (!username) { alert('Please enter a username'); return; }
+      if (!name) { alert('Please enter colleague full name'); return; }
+      if (!department) { alert('Please enter department name'); return; }
+      if (!password) { alert('Please enter an initial password'); return; }
+
+      const btn = document.getElementById('btnCreateUser');
+      btn.disabled = true;
+      btn.innerText = 'Creating Account...';
+
+      try {
+        const res = await fetch('/api/users', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, name, department, password, role })
+        });
+        const data = await res.json();
+        if (data.success) {
+          alert('✓ User account created successfully! Workspace "' + username + '" initialized.');
+          window.location.reload();
+        } else {
+          alert('Error: ' + (data.detail || 'Could not create user'));
+        }
+      } catch (err) {
+        alert('Request failed: ' + err);
+      } finally {
+        btn.disabled = false;
+        btn.innerText = '✨ Create User & Initialize Blank Workspace';
+      }
+    }
+
+    async function toggleUserActive(uname) {
+      if (!confirm('Toggle active status for user @' + uname + '?')) return;
+      try {
+        const res = await fetch('/api/users/' + encodeURIComponent(uname) + '/toggle', { method: 'PATCH' });
+        const data = await res.json();
+        if (data.success) {
+          window.location.reload();
+        } else {
+          alert(data.detail || 'Failed to toggle status');
+        }
+      } catch (e) {
+        alert('Error: ' + e);
+      }
+    }
+
+    async function deleteUserAccount(uname) {
+      if (!confirm('Are you sure you want to delete user @' + uname + '? This will remove their login access.')) return;
+      try {
+        const res = await fetch('/api/users/' + encodeURIComponent(uname), { method: 'DELETE' });
+        const data = await res.json();
+        if (data.success) {
+          alert('✓ User deleted');
+          window.location.reload();
+        } else {
+          alert(data.detail || 'Failed to delete user');
+        }
+      } catch (e) {
+        alert('Error: ' + e);
+      }
+    }
+
+    async function reloadUsersList() {
+      try {
+        const res = await fetch('/api/users');
+        const data = await res.json();
+        if (data.success) {
+          window.location.reload();
+        }
+      } catch (e) {
+        console.error(e);
       }
     }
   </script>
