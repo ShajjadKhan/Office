@@ -545,7 +545,7 @@ async def save_employee(request: Request, emp: Dict[str, Any] = Body(...)):
         emp["id"] = new_id
         associates.append(emp)
     save_json('associates.json', associates, workspace=ws)
-    return {"success": True, "employee": emp}
+    return {"success": True, "employee": emp, "associates": associates}
 
 @app.delete("/api/employees/{emp_id}")
 async def delete_employee(request: Request, emp_id: int):
@@ -553,7 +553,7 @@ async def delete_employee(request: Request, emp_id: int):
     associates = load_associates(workspace=ws)
     associates = [a for a in associates if a.get("id") != emp_id]
     save_json('associates.json', associates, workspace=ws)
-    return {"success": True, "message": f"Employee #{emp_id} deleted"}
+    return {"success": True, "message": f"Employee #{emp_id} deleted", "associates": associates}
 
 @app.post("/api/companies")
 async def add_company(request: Request, payload: Dict[str, str] = Body(...)):

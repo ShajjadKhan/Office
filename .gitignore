@@ -19,4 +19,5 @@ exports/*
 .vscode/
 *.bak
 data/sessions.json
+data/workspaces/
 data/.api_key
