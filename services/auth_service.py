@@ -186,11 +186,21 @@ def init_workspace(workspace: str, department_name: str = "General Department"):
     ]
 
     # Clean Blank Slate for private department data
-    for fname in ["associates.json", "companies.json", "properties.json", "authorizers.json"]:
+    for fname in ["associates.json", "companies.json", "authorizers.json"]:
         file_path = os.path.join(ws_dir, fname)
         if not os.path.exists(file_path):
             with open(file_path, "w", encoding="utf-8") as f:
                 json.dump([], f, indent=2)
+
+    # Standard Hotel Properties (MEA, RMH, Staff Housing)
+    props_file = os.path.join(ws_dir, "properties.json")
+    if not os.path.exists(props_file):
+        with open(props_file, "w", encoding="utf-8") as f:
+            json.dump([
+                {"code": "MEA", "name": "Marriott Executive Apartments"},
+                {"code": "RMH", "name": "Riyadh Marriott Hotel"},
+                {"code": "Housing", "name": "Staff Housing"}
+            ], f, indent=2)
                 
     # Standard Universal Company Stamps (Consistent across all departments)
     stamps_file = os.path.join(ws_dir, "stamps.json")

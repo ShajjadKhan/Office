@@ -137,13 +137,57 @@ def load_companies(workspace: str = "default") -> List[str]:
     default = ["Dar Al Ishraq", "Dar Al Wafa", "Nasim Alenjaz", "Sama Al riyadha", "Soundline", "Work Force", "Qasir AL Nokba", "Tamkeen"] if workspace in ["default", "shajjad"] else []
     return load_json('companies.json', default, workspace=workspace)
 
+STANDARD_PROPERTIES: List[Dict[str, str]] = [
+    {"code": "MEA", "name": "Marriott Executive Apartments"},
+    {"code": "RMH", "name": "Riyadh Marriott Hotel"},
+    {"code": "Housing", "name": "Staff Housing"}
+]
+
+STANDARD_PROPERTY_MAP: Dict[str, str] = {
+    "MEA": "Marriott Executive Apartments",
+    "RMH": "Riyadh Marriott Hotel",
+    "HOUSING": "Staff Housing",
+    "MARRIOTT EXECUTIVE APARTMENTS": "Marriott Executive Apartments",
+    "RIYADH MARRIOTT HOTEL": "Riyadh Marriott Hotel",
+    "STAFF HOUSING": "Staff Housing",
+    "AL WIZARAT": "Marriott Executive Apartments",
+    "AL-WIZARAT": "Marriott Executive Apartments",
+    "WIZARAT": "Marriott Executive Apartments",
+    "HQ": "Riyadh Marriott Hotel"
+}
+
+def resolve_property_full_name(prop: str, props_map: Dict[str, str] = None) -> str:
+    if not prop:
+        return "Marriott Executive Apartments"
+    clean = str(prop).strip()
+    upper = clean.upper()
+    
+    # 1. Check custom properties map (by exact key or uppercase key)
+    if props_map:
+        if prop in props_map:
+            return props_map[prop]
+        for k, v in props_map.items():
+            if str(k).strip().upper() == upper:
+                return v
+            if str(v).strip().upper() == upper:
+                return v
+                
+    # 2. Check standard properties map
+    if upper in STANDARD_PROPERTY_MAP:
+        return STANDARD_PROPERTY_MAP[upper]
+        
+    # 3. If prop already contains descriptive terms
+    if any(term in upper for term in ["MARRIOTT", "HOTEL", "APARTMENT", "HOUSING"]):
+        return clean
+        
+    # 4. Return clean code / name without ever appending " Property"
+    return clean
+
 def load_properties(workspace: str = "default") -> List[Dict[str, Any]]:
-    default = [
-        {"code": "RMH", "name": "Riyadh Marriott Hotel"},
-        {"code": "MEA", "name": "Marriott Executive Apartments"},
-        {"code": "Housing", "name": "Staff Housing"}
-    ] if workspace in ["default", "shajjad"] else []
-    return load_json('properties.json', default, workspace=workspace)
+    props = load_json('properties.json', None, workspace=workspace)
+    if not props or len(props) == 0:
+        return [dict(p) for p in STANDARD_PROPERTIES]
+    return props
 
 UNIVERSAL_STAMPS: List[Dict[str, Any]] = [
     {"code": "8", "name": "Regular Work", "hours": 8, "bg_color": "#F1F5F9", "text_color": "#334155"},
@@ -222,6 +266,9 @@ def load_settings(workspace: str = "default") -> Dict[str, Any]:
         custom = {}
     props_list = load_properties(workspace=workspace)
     props_map = {p["code"]: p["name"] for p in props_list if isinstance(p, dict)}
+    for std_code, std_name in STANDARD_PROPERTY_MAP.items():
+        if std_code not in props_map:
+            props_map[std_code] = std_name
     depts_list = load_departments(workspace=workspace)
     dept_map = {d["code"]: d["name"] for d in depts_list if isinstance(d, dict)}
     custom["properties"] = props_map
@@ -299,10 +346,11 @@ def get_month_data(year: int, month: int, workspace: str = "default"):
             dept_title = depts.get(dept_code)
             if not dept_title:
                 dept_title = depts.get("0430", "Department")
+            prop_full = resolve_property_full_name(prop, props)
             groups_dict[key] = {
                 "key": key,
                 "property": prop,
-                "property_full": props.get(prop, f"{prop} Property"),
+                "property_full": prop_full,
                 "company": comp,
                 "department": dept_title,
                 "department_code": dept_code,
