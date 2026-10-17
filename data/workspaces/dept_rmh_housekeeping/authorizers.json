@@ -1,0 +1,26 @@
+[
+  {
+    "id": 1,
+    "title": "Department Head",
+    "name": "Mr. Khabir",
+    "is_active": true
+  },
+  {
+    "id": 2,
+    "title": "Director of Human Resource",
+    "name": "",
+    "is_active": true
+  },
+  {
+    "id": 3,
+    "title": "Director of Finance",
+    "name": "",
+    "is_active": true
+  },
+  {
+    "id": 4,
+    "title": "General Manager",
+    "name": "Eng. Khalid Al-Otaibi",
+    "is_active": true
+  }
+]

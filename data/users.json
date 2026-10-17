@@ -48,5 +48,25 @@
     "salt": "2be2717c35632d96c5f1bb7323a52231",
     "password_hash": "171af045193842f8e8a9e210a90142509221065568fb28405b24dbd8e471ec82",
     "is_active": true
+  },
+  {
+    "username": "khabir",
+    "name": "Mr. Khabir",
+    "department": "RMH Housekeeping",
+    "role": "user",
+    "workspace": "dept_rmh_housekeeping",
+    "salt": "2be2717c35632d96c5f1bb7323a52231",
+    "password_hash": "171af045193842f8e8a9e210a90142509221065568fb28405b24dbd8e471ec82",
+    "is_active": true
+  },
+  {
+    "username": "mrkhabir",
+    "name": "Mr. Khabir",
+    "department": "RMH Housekeeping",
+    "role": "user",
+    "workspace": "dept_rmh_housekeeping",
+    "salt": "2be2717c35632d96c5f1bb7323a52231",
+    "password_hash": "171af045193842f8e8a9e210a90142509221065568fb28405b24dbd8e471ec82",
+    "is_active": true
   }
 ]

@@ -1,0 +1,51 @@
+[
+  {
+    "code": "8",
+    "name": "Regular Work",
+    "hours": 8,
+    "bg_color": "#F1F5F9",
+    "text_color": "#334155"
+  },
+  {
+    "code": "WO",
+    "name": "Weekly Off",
+    "hours": 8,
+    "bg_color": "#FEF3C7",
+    "text_color": "#B45309"
+  },
+  {
+    "code": "PH",
+    "name": "Public Holiday",
+    "hours": 8,
+    "bg_color": "#D1FAE5",
+    "text_color": "#065F46"
+  },
+  {
+    "code": "SL",
+    "name": "Sick Leave",
+    "hours": 8,
+    "bg_color": "#E0F2FE",
+    "text_color": "#0369A1"
+  },
+  {
+    "code": "AL",
+    "name": "Annual Leave",
+    "hours": 0,
+    "bg_color": "#E0E7FF",
+    "text_color": "#3730A3"
+  },
+  {
+    "code": "A",
+    "name": "Absent",
+    "hours": 0,
+    "bg_color": "#FEE2E2",
+    "text_color": "#991B1B"
+  },
+  {
+    "code": "V",
+    "name": "Vacation",
+    "hours": 0,
+    "bg_color": "#FFE4E6",
+    "text_color": "#9F1239"
+  }
+]

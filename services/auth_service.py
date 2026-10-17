@@ -165,6 +165,7 @@ def list_workspaces() -> List[Dict[str, Any]]:
         else:
             if display_name not in ws_map[ws]["members"]:
                 ws_map[ws]["members"].append(display_name)
+            if u.get("username") not in ws_map[ws]["usernames"]:
                 ws_map[ws]["usernames"].append(u.get("username"))
                 
     # Also associate admin users (e.g. Shajjad Khan) with their department workspace if matching
@@ -256,12 +257,17 @@ def create_or_update_user(
     users = load_users()
     existing = next((u for u in users if u.get("username", "").lower() == uname), None)
     
+    if department and department.strip():
+        dept_clean = department.strip()
+    elif existing and existing.get("department"):
+        dept_clean = existing.get("department").strip()
+    else:
+        dept_clean = "General Department"
+
     if existing:
         if name and name.strip():
             existing["name"] = name.strip()
-        if department and department.strip():
-            existing["department"] = department.strip()
-        dept_clean = existing.get("department", "General Department")
+        existing["department"] = dept_clean
         if role:
             existing["role"] = role
         if password and password.strip():
@@ -283,7 +289,7 @@ def create_or_update_user(
         shared_ws = get_department_workspace(dept_clean, fallback_username=uname)
         user_rec = {
             "username": uname,
-            "name": name.strip() or uname.capitalize(),
+            "name": (name.strip() if name and name.strip() else uname.capitalize()),
             "department": dept_clean,
             "role": role or "user",
             "workspace": shared_ws,
