@@ -166,6 +166,22 @@ def list_workspaces() -> List[Dict[str, Any]]:
             if display_name not in ws_map[ws]["members"]:
                 ws_map[ws]["members"].append(display_name)
                 ws_map[ws]["usernames"].append(u.get("username"))
+                
+    # Also associate admin users (e.g. Shajjad Khan) with their department workspace if matching
+    for u in users:
+        if u.get("username") == "admin":
+            continue
+        if u.get("role") == "admin" or u.get("username") == "shajjad":
+            admin_dept = (u.get("department") or '').strip().lower()
+            if admin_dept:
+                for ws_id, ws_info in ws_map.items():
+                    if ws_info.get("department", "").strip().lower() == admin_dept:
+                        display_name = u.get("name") or u.get("username")
+                        if display_name not in ws_info["members"]:
+                            ws_info["members"].append(display_name)
+                        if u.get("username") not in ws_info["usernames"]:
+                            ws_info["usernames"].append(u.get("username"))
+                            
     return list(ws_map.values())
 
 def init_workspace(workspace: str, department_name: str = "General Department"):
