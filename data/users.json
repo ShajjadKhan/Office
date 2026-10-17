@@ -51,12 +51,12 @@
   },
   {
     "username": "khabir",
-    "name": "Mr. Khabir",
-    "department": "RMH Housekeeping",
+    "name": "Khabir Uddin",
+    "department": "Hotel Housekeeping",
     "role": "user",
     "workspace": "dept_rmh_housekeeping",
-    "salt": "2be2717c35632d96c5f1bb7323a52231",
-    "password_hash": "171af045193842f8e8a9e210a90142509221065568fb28405b24dbd8e471ec82",
+    "salt": "302d9b9327b30700ead134f000ac3d51",
+    "password_hash": "2dab66ab179c4f6516d70a709d228301c7bab8317bea1b80e0782cd08a5c5872",
     "is_active": true
   },
   {
