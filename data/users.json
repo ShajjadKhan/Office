@@ -28,5 +28,25 @@
     "salt": "2be2717c35632d96c5f1bb7323a52231",
     "password_hash": "171af045193842f8e8a9e210a90142509221065568fb28405b24dbd8e471ec82",
     "is_active": true
+  },
+  {
+    "username": "yahiya",
+    "name": "Yahiya Nurul Islam",
+    "department": "Staff Housing",
+    "role": "user",
+    "workspace": "yahiya",
+    "salt": "4a18b6e5f14966918d7e06e848ee639f",
+    "password_hash": "431ae87aa5b7e0a2aef37abb4dea17142f6f36494d5900c1fa14b72a33ae464b",
+    "is_active": true
+  },
+  {
+    "username": "judegolez",
+    "name": "Jude Golez Asong",
+    "department": "RMH Engineering",
+    "role": "user",
+    "workspace": "judegolez",
+    "salt": "2be2717c35632d96c5f1bb7323a52231",
+    "password_hash": "171af045193842f8e8a9e210a90142509221065568fb28405b24dbd8e471ec82",
+    "is_active": true
   }
 ]

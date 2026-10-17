@@ -88,7 +88,8 @@ def save_users(users: List[Dict[str, Any]]):
 def get_user(username: str) -> Optional[Dict[str, Any]]:
     uname = (username or '').strip().lower()
     for u in load_users():
-        if u.get("username", "").lower() == uname:
+        u_name = u.get("username", "").lower()
+        if u_name == uname or (uname in ["yahiya", "yahiyanurul"] and u_name in ["yahiya", "yahiyanurul"]):
             return u
     return None
 
@@ -227,10 +228,10 @@ def init_workspace(workspace: str, department_name: str = "General Department"):
 
 def create_or_update_user(
     username: str,
-    name: str,
-    department: str,
+    name: Optional[str] = None,
+    department: Optional[str] = None,
     password: Optional[str] = None,
-    role: str = "user"
+    role: Optional[str] = None
 ) -> Dict[str, Any]:
     uname = (username or '').strip().lower()
     if not uname:
@@ -238,11 +239,13 @@ def create_or_update_user(
         
     users = load_users()
     existing = next((u for u in users if u.get("username", "").lower() == uname), None)
-    dept_clean = (department or '').strip() or "General Department"
     
     if existing:
-        existing["name"] = name.strip() or existing.get("name", uname)
-        existing["department"] = dept_clean
+        if name and name.strip():
+            existing["name"] = name.strip()
+        if department and department.strip():
+            existing["department"] = department.strip()
+        dept_clean = existing.get("department", "General Department")
         if role:
             existing["role"] = role
         if password and password.strip():
@@ -314,7 +317,9 @@ def authenticate_user(username: str, password: str) -> Optional[Dict[str, Any]]:
     users = load_users()
     uname = (username or '').strip().lower()
     for u in users:
-        if u.get("username", "").lower() == uname and u.get("is_active", True):
+        u_name = u.get("username", "").lower()
+        matches = (u_name == uname) or (uname in ["yahiya", "yahiyanurul"] and u_name in ["yahiya", "yahiyanurul"])
+        if matches and u.get("is_active", True):
             if verify_password(password, u.get("salt", ""), u.get("password_hash", "")):
                 return u
     return None
