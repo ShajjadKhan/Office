@@ -842,6 +842,7 @@
               {{ month_names[m] }}
             </option>
           {% endfor %}
+        </select>
         <button class="btn btn-primary" id="btnSaveMonth" onclick="saveChanges()">💾 Save Month</button>
         <span id="saveStatusIndicator" style="font-size: 12px; font-weight: 700; color: #10b981; margin-left: 6px; display: inline-flex; align-items: center; gap: 4px; transition: all 0.25s ease;"></span>
         <div style="display: inline-flex; align-items: center; gap: 8px; margin-left: 8px; padding-left: 10px; border-left: 1.5px solid var(--border);">
@@ -917,19 +918,30 @@
 
       <div class="shortcut-body">
         <!-- 1. Search Employee -->
-        <div class="shortcut-emp-section">
-          <label class="shortcut-label">Associate Name (Type min. 2 letters for auto-suggestions):</label>
-          <div class="autocomplete-wrapper">
-            <input type="text"
-                   id="shortcutEmpSearch"
-                   class="shortcut-search-input"
-                   placeholder="🔍 Type employee name (e.g. 'Ahmed')..."
-                   autocomplete="off"
-                   oninput="handleEmpSearchInput(this.value)">
-            <input type="hidden" id="shortcutSelectedAssocId" value="">
-            <div id="autocompleteDropdown" class="autocomplete-dropdown" style="display: none;"></div>
+        <div class="shortcut-emp-section" style="margin-bottom: 18px;">
+          <label class="shortcut-label" style="font-size: 13px; font-weight: 700; color: #1e293b; margin-bottom: 6px;">
+            Associate Name (Search or type for auto-suggestions):
+          </label>
+          <div style="display: flex; gap: 8px; align-items: center; max-width: 600px;">
+            <div class="autocomplete-wrapper" style="flex: 1; max-width: 100%;">
+              <input type="text"
+                     id="shortcutEmpSearch"
+                     class="shortcut-search-input"
+                     placeholder="🔍 Type employee name, Iqama, or company..."
+                     autocomplete="off"
+                     oninput="handleEmpSearchInput(this.value)"
+                     onkeydown="if(event.key==='Enter'){event.preventDefault(); triggerEmpSearch();}">
+              <input type="hidden" id="shortcutSelectedAssocId" value="">
+              <div id="autocompleteDropdown" class="autocomplete-dropdown" style="display: none;"></div>
+            </div>
+            <button type="button"
+                    class="btn btn-primary"
+                    onclick="triggerEmpSearch()"
+                    style="padding: 9px 18px; font-weight: 700; white-space: nowrap; display: flex; align-items: center; gap: 6px;">
+              <span>🔍</span> Search
+            </button>
           </div>
-          <div id="selectedEmpBadge" class="selected-emp-badge" style="display: none;"></div>
+          <div id="selectedEmpBadge" class="selected-emp-badge" style="display: none; margin-top: 8px;"></div>
         </div>
 
         <!-- 2. Stacked Date & Stamp Pairs -->
@@ -1606,25 +1618,36 @@
     let pairIdCounter = 0;
     const currentMonthDays = {{ month_info.days_in_month }};
 
-    function handleEmpSearchInput(query) {
+    function triggerEmpSearch() {
+      const val = (document.getElementById('shortcutEmpSearch').value || '').trim();
+      handleEmpSearchInput(val, true);
+      document.getElementById('shortcutEmpSearch').focus();
+    }
+
+    function handleEmpSearchInput(query, forceShowAll = false) {
       const dropdown = document.getElementById('autocompleteDropdown');
       const q = (query || '').trim().toLowerCase();
       
-      if (q.length < 2) {
+      if (!forceShowAll && q.length < 1) {
         dropdown.style.display = 'none';
         dropdown.innerHTML = '';
         return;
       }
       
-      const matches = allAssociatesData.filter(a => {
-        const nameMatch = (a.name || '').toLowerCase().includes(q);
-        const iqamaMatch = (a.iqama || '').toLowerCase().includes(q);
-        const compMatch = (a.company || '').toLowerCase().includes(q);
-        return nameMatch || iqamaMatch || compMatch;
-      });
+      let matches = allAssociatesData;
+      if (q.length >= 1) {
+        matches = allAssociatesData.filter(a => {
+          const nameMatch = (a.name || '').toLowerCase().includes(q);
+          const iqamaMatch = (a.iqama || '').toLowerCase().includes(q);
+          const compMatch = (a.company || '').toLowerCase().includes(q);
+          const deptMatch = (a.department || '').toLowerCase().includes(q);
+          const propMatch = (a.property || '').toLowerCase().includes(q);
+          return nameMatch || iqamaMatch || compMatch || deptMatch || propMatch;
+        });
+      }
       
       if (matches.length === 0) {
-        dropdown.innerHTML = '<div class="autocomplete-empty">No matching recorded employees found</div>';
+        dropdown.innerHTML = '<div class="autocomplete-empty" style="padding: 10px 14px; color: #94a3b8; font-size: 13px;">No matching recorded associates found</div>';
         dropdown.style.display = 'block';
         return;
       }
@@ -1638,6 +1661,7 @@
             <span>${escapeHtml(a.company)}</span>
             <span>•</span>
             <span class="badge" style="background:#e0f2fe; color:#0369a1;">${escapeHtml(a.property || '')}</span>
+            ${a.department ? `<span>•</span><span style="color:#4f46e5; font-weight:600;">${escapeHtml(a.department)}</span>` : ''}
           </div>
         </div>
       `).join('');
