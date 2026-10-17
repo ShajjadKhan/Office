@@ -6,6 +6,19 @@ def get_month_info(year: int, month: int):
     days_in_month = calendar.monthrange(year, month)[1]
     month_name = calendar.month_name[month]
     month_short = calendar.month_abbr[month].upper()
+    
+    days_meta = []
+    weekday_abbrs = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"]
+    for d in range(1, days_in_month + 1):
+        wd = calendar.weekday(year, month, d)  # 0=Mon, 4=Fri, 5=Sat, 6=Sun
+        days_meta.append({
+            "day": d,
+            "weekday": wd,
+            "weekday_name": weekday_abbrs[wd],
+            "is_friday": (wd == 4),
+            "is_weekend": (wd in [4, 5]),
+        })
+
     return {
         "year": year,
         "month": month,
@@ -13,7 +26,8 @@ def get_month_info(year: int, month: int):
         "month_name": month_name,
         "month_short": month_short,
         "period_str": f"01/{month:02d}/{year} To {days_in_month:02d}/{month:02d}/{year}",
-        "label": f"{month_name} {year}"
+        "label": f"{month_name} {year}",
+        "days_meta": days_meta
     }
 
 def generate_default_days(days_in_month: int, off_days_count: int = 4, seed_offset: int = 0) -> List[str]:

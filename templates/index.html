@@ -246,12 +246,13 @@
     }
     table.data-table {
       width: 100%;
-      border-collapse: collapse;
+      border-collapse: separate;
+      border-spacing: 0;
       font-size: 13px;
       min-width: 1200px;
     }
     table.data-table th, table.data-table td {
-      padding: 7px 4px;
+      padding: 6px 4px;
       border-bottom: 1px solid var(--border);
       border-right: 1px solid #f1f5f9;
       text-align: center;
@@ -263,26 +264,122 @@
       font-size: 11px;
       position: sticky;
       top: 0;
+      z-index: 10;
+    }
+
+    /* Sticky Col 0: Index / Row # */
+    table.data-table th.col-sticky-num {
+      position: sticky;
+      left: 0;
+      top: 0;
+      z-index: 25;
+      background: #f8fafc;
+      width: 44px;
+      min-width: 44px;
+      max-width: 44px;
+      border-right: 1px solid #e2e8f0;
+    }
+    table.data-table td.col-sticky-num {
+      position: sticky;
+      left: 0;
+      z-index: 5;
+      background: #ffffff;
+      width: 44px;
+      min-width: 44px;
+      max-width: 44px;
+      border-right: 1px solid #e2e8f0;
+    }
+
+    /* Sticky Col 1: Associate Name & Iqama */
+    table.data-table th.col-sticky-name {
+      position: sticky;
+      left: 44px;
+      top: 0;
+      z-index: 25;
+      background: #f8fafc;
+      width: 185px;
+      min-width: 185px;
+      border-right: 2px solid #cbd5e1;
+      text-align: left;
+      padding-left: 10px;
+      box-shadow: 2px 0 4px -2px rgba(0,0,0,0.06);
     }
     table.data-table td.col-sticky-name {
       text-align: left;
       font-weight: 600;
-      padding-left: 12px;
+      padding-left: 10px;
       white-space: nowrap;
       position: sticky;
-      left: 0;
-      background: white;
-      z-index: 2;
-      border-right: 2px solid #e2e8f0;
+      left: 44px;
+      background: #ffffff;
+      z-index: 5;
+      width: 185px;
+      min-width: 185px;
+      border-right: 2px solid #cbd5e1;
+      box-shadow: 2px 0 4px -2px rgba(0,0,0,0.06);
     }
-    table.data-table th.col-sticky-name {
-      position: sticky;
-      left: 0;
-      z-index: 3;
-      background: #f8fafc;
-      border-right: 2px solid #e2e8f0;
-      text-align: left;
-      padding-left: 12px;
+
+    /* Row hover effect */
+    table.data-table tbody tr:hover td {
+      background-color: #f8fafc;
+    }
+    table.data-table tbody tr:hover td.col-sticky-num,
+    table.data-table tbody tr:hover td.col-sticky-name {
+      background-color: #f1f5f9;
+    }
+
+    /* Active highlighted row */
+    table.data-table tbody tr.assoc-row-active td {
+      background-color: #f0fdf4 !important;
+    }
+    table.data-table tbody tr.assoc-row-active td.col-sticky-num,
+    table.data-table tbody tr.assoc-row-active td.col-sticky-name {
+      background-color: #dcfce7 !important;
+    }
+
+    /* Weekday header styles */
+    .th-day-hdr {
+      padding: 4px 1px !important;
+      text-align: center;
+      line-height: 1.15;
+    }
+    .hdr-friday {
+      background: #fef3c7 !important;
+      color: #92400e !important;
+      border-bottom: 2px solid #f59e0b !important;
+    }
+    .hdr-weekend {
+      background: #fef9c3 !important;
+      color: #854d0e !important;
+    }
+    td.col-friday {
+      background-color: #fffdf5;
+    }
+
+    /* Filter pills */
+    .filter-pill {
+      background: #ffffff;
+      border: 1px solid #cbd5e1;
+      color: #475569;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: 9999px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      white-space: nowrap;
+    }
+    .filter-pill:hover {
+      background: #f1f5f9;
+      border-color: #94a3b8;
+      color: #0f172a;
+    }
+    .filter-pill.active {
+      background: #0284c7;
+      border-color: #0284c7;
+      color: #ffffff;
+      font-weight: 700;
+      box-shadow: 0 1px 3px rgba(2, 132, 199, 0.3);
     }
     .day-cell {
       cursor: pointer;
@@ -987,25 +1084,62 @@
         </div>
       </div>
 
+      <!-- Grid Real-Time Search & Department/Company Filter Bar -->
+      <div class="grid-filter-bar" style="display: flex; gap: 12px; align-items: center; justify-content: space-between; padding: 10px 16px; background: #f8fafc; border-bottom: 1px solid var(--border); flex-wrap: wrap;">
+        <div style="display: flex; gap: 8px; align-items: center; flex: 1; min-width: 260px; max-width: 460px;">
+          <div style="position: relative; width: 100%;">
+            <input type="text"
+                   id="gridFilterInput"
+                   placeholder="🔍 Filter grid by name, Iqama, company..."
+                   style="width: 100%; padding: 7px 28px 7px 10px; font-size: 13px; border: 1px solid #cbd5e1; border-radius: 6px; outline: none; background: #fff;"
+                   oninput="applyGridFilters()">
+            <button type="button"
+                    onclick="clearGridFilter()"
+                    id="btnGridClear"
+                    style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; font-size: 13px; color: #94a3b8; cursor: pointer; display: none;"
+                    title="Clear filter">✕</button>
+          </div>
+        </div>
+        <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;" id="deptFilterPills">
+          <!-- Populated by JS -->
+        </div>
+        <div id="gridRowCounter" style="font-size: 12px; font-weight: 700; color: #475569; margin-left: auto;">
+          Showing <span id="visibleRowCount">{{ associates|length }}</span> of {{ associates|length }} associates
+        </div>
+      </div>
+
       <div class="table-responsive">
         <table class="data-table" id="attendanceTable">
           <thead>
             <tr>
-              <th style="width: 44px;">#</th>
-              <th class="col-sticky-name" style="width: 180px;">Associate Name</th>
+              <th class="col-sticky-num">#</th>
+              <th class="col-sticky-name">Associate Name</th>
               <th style="width: 110px;">Company</th>
               <th style="width: 50px;">Prop</th>
-              {% for d in range(1, month_info.days_in_month + 1) %}
-                <th style="width: 25px;">{{ d }}</th>
-              {% endfor %}
+              {% if month_info.days_meta %}
+                {% for d in month_info.days_meta %}
+                  <th class="th-day-hdr {% if d.is_friday %}hdr-friday{% elif d.is_weekend %}hdr-weekend{% endif %}" style="width: 26px; min-width: 26px;" title="{{ d.weekday_name }}, {{ d.day }} {{ month_info.month_name }}">
+                    <div style="font-size: 11px; font-weight: 700;">{{ d.day }}</div>
+                    <div style="font-size: 9px; font-weight: 600; text-transform: uppercase;">{{ d.weekday_name }}</div>
+                  </th>
+                {% endfor %}
+              {% else %}
+                {% for d in range(1, month_info.days_in_month + 1) %}
+                  <th style="width: 25px;">{{ d }}</th>
+                {% endfor %}
+              {% endif %}
               <th style="width: 50px; background: #eef2f6;">Work</th>
               <th style="width: 55px; background: #e0f2fe; color: #0369a1;">Hours</th>
             </tr>
           </thead>
           <tbody>
             {% for assoc in associates %}
-            <tr data-assoc-id="{{ assoc.id }}">
-              <td>
+            <tr data-assoc-id="{{ assoc.id }}"
+                data-dept="{{ assoc.department or '' }}"
+                data-company="{{ assoc.company or '' }}"
+                data-prop="{{ assoc.property or '' }}"
+                data-search="{{ (assoc.name ~ ' ' ~ assoc.iqama ~ ' ' ~ (assoc.company or '') ~ ' ' ~ (assoc.department or '') ~ ' ' ~ (assoc.property or ''))|lower }}">
+              <td class="col-sticky-num">
                 <div style="display: flex; align-items: center; justify-content: center; gap: 3px;">
                   <span>{{ loop.index }}</span>
                   <button type="button" class="btn-row-del" onclick="removeAssociateFromMonth({{ assoc.id }}, '{{ assoc.name|escape }}')" title="Remove from this month's report">🗑️</button>
@@ -1014,15 +1148,20 @@
               <td class="col-sticky-name">
                 <div>{{ assoc.name }}</div>
                 <div style="font-size: 10px; color: var(--text-muted); font-family: monospace;">{{ assoc.iqama }}</div>
+                {% if assoc.department and assoc.department != active_workspace_title and assoc.department != current_user_dept %}
+                  <div style="font-size: 9px; font-weight: 700; color: #4f46e5; margin-top: 1px;">📍 {{ assoc.department }}</div>
+                {% endif %}
               </td>
               <td><span class="badge">{{ assoc.company }}</span></td>
               <td><span class="badge {% if assoc.property == 'RMH' %}badge-rmh{% else %}badge-mea{% endif %}">{{ assoc.property }}</span></td>
               {% for raw_val in assoc.days %}
                 {% set val = raw_val|upper %}
-                <td>
+                {% set day_idx = loop.index0 %}
+                {% set meta = month_info.days_meta[day_idx] if month_info.days_meta and day_idx < month_info.days_meta|length else None %}
+                <td class="{% if meta and meta.is_friday %}col-friday{% endif %}">
                   <div class="day-cell"
                        onclick="handleCellClick(this)"
-                       data-day="{{ loop.index0 }}">
+                       data-day="{{ day_idx }}">
                     {{ val }}
                   </div>
                 </td>
@@ -1681,6 +1820,56 @@
         <button type="button" class="btn-clear-selection" onclick="clearSelectedEmployee()" title="Clear selection">✕</button>
       `;
       badge.style.display = 'inline-flex';
+
+      loadAssociateExistingOffDays(emp.id);
+    }
+
+    function loadAssociateExistingOffDays(assocId) {
+      const activeAssoc = associatesData.find(a => a.id === assocId);
+      const container = document.getElementById('shortcutPairsContainer');
+      const statusEl = document.getElementById('shortcutStatusMsg');
+
+      // Highlight row in table and smooth scroll
+      const row = document.querySelector(`tr[data-assoc-id="${assocId}"]`);
+      if (row) {
+        document.querySelectorAll('tr.assoc-row-active').forEach(r => r.classList.remove('assoc-row-active'));
+        row.classList.add('assoc-row-active');
+        row.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+
+      if (!container) return;
+
+      if (activeAssoc && Array.isArray(activeAssoc.days)) {
+        const nonEightDays = [];
+        activeAssoc.days.forEach((stamp, idx) => {
+          const s = String(stamp || '').trim().toUpperCase();
+          if (s && s !== '8') {
+            nonEightDays.push({ day: idx + 1, stamp: s });
+          }
+        });
+
+        if (nonEightDays.length > 0) {
+          container.innerHTML = '';
+          nonEightDays.forEach(item => {
+            addShortcutPair(String(item.day), item.stamp);
+          });
+          appendAddButtonToContainer();
+          if (statusEl) {
+            statusEl.innerHTML = `<span style="color:#059669; font-weight:700;">📋 Loaded ${nonEightDays.length} existing scheduled off/stamp days. Edit or add more below.</span>`;
+          }
+          return;
+        }
+      }
+
+      // Default: 4 empty WO boxes
+      container.innerHTML = '';
+      for (let i = 0; i < 4; i++) {
+        addShortcutPair('', 'WO');
+      }
+      appendAddButtonToContainer();
+      if (statusEl) {
+        statusEl.innerHTML = `<span style="color:#64748b;">Specify dates for 4 Weekly Offs (WO) or other stamps.</span>`;
+      }
     }
 
     function clearSelectedEmployee() {
@@ -1688,6 +1877,7 @@
       document.getElementById('shortcutSelectedAssocId').value = '';
       document.getElementById('selectedEmpBadge').style.display = 'none';
       document.getElementById('autocompleteDropdown').style.display = 'none';
+      document.querySelectorAll('tr.assoc-row-active').forEach(r => r.classList.remove('assoc-row-active'));
     }
 
     // Close autocomplete when clicking outside
@@ -1866,8 +2056,127 @@
       }
     }
 
-    // Auto-initialize 4 default pairs on page load
-    setTimeout(resetShortcutForm, 50);
+    // ================= Grid Real-Time Search & Department/Company Filtering =================
+    let currentDeptFilter = 'ALL';
+
+    function initGridFilterPills() {
+      const pillsContainer = document.getElementById('deptFilterPills');
+      if (!pillsContainer) return;
+
+      const totalCount = associatesData.length;
+      if (totalCount === 0) {
+        pillsContainer.innerHTML = '';
+        return;
+      }
+
+      // Check if there are sub-departments
+      const deptCounts = {};
+      associatesData.forEach(a => {
+        const d = (a.department || '').trim();
+        if (d) {
+          deptCounts[d] = (deptCounts[d] || 0) + 1;
+        }
+      });
+
+      const distinctDepts = Object.keys(deptCounts);
+      let filterType = 'dept';
+      let filterItems = [];
+
+      if (distinctDepts.length > 1) {
+        filterType = 'dept';
+        filterItems = distinctDepts.map(d => ({ key: d, label: d, count: deptCounts[d] }));
+      } else {
+        // Fallback to company filtering if no multiple sub-departments
+        filterType = 'company';
+        const compCounts = {};
+        associatesData.forEach(a => {
+          const c = (a.company || 'Unknown').trim();
+          compCounts[c] = (compCounts[c] || 0) + 1;
+        });
+        const distinctComps = Object.keys(compCounts);
+        if (distinctComps.length > 1) {
+          filterItems = distinctComps.map(c => ({ key: c, label: c, count: compCounts[c] }));
+        }
+      }
+
+      if (filterItems.length === 0) {
+        pillsContainer.innerHTML = '';
+        return;
+      }
+
+      let html = `<button type="button" class="filter-pill active" data-filter="ALL" onclick="setGridCategoryFilter('ALL')">All (${totalCount})</button>`;
+      filterItems.forEach(item => {
+        html += `<button type="button" class="filter-pill" data-filter="${escapeHtml(item.key)}" onclick="setGridCategoryFilter('${escapeHtml(item.key)}')">${escapeHtml(item.label)} (${item.count})</button>`;
+      });
+      pillsContainer.innerHTML = html;
+    }
+
+    function setGridCategoryFilter(key) {
+      currentDeptFilter = key;
+      document.querySelectorAll('#deptFilterPills .filter-pill').forEach(btn => {
+        if (btn.getAttribute('data-filter') === key) {
+          btn.classList.add('active');
+        } else {
+          btn.classList.remove('active');
+        }
+      });
+      applyGridFilters();
+    }
+
+    function applyGridFilters() {
+      const q = (document.getElementById('gridFilterInput')?.value || '').trim().toLowerCase();
+      const clearBtn = document.getElementById('btnGridClear');
+      if (clearBtn) clearBtn.style.display = q ? 'inline-block' : 'none';
+
+      const rows = document.querySelectorAll('#attendanceTable tbody tr[data-assoc-id]');
+      let visible = 0;
+
+      rows.forEach(r => {
+        const rowSearch = (r.getAttribute('data-search') || '').toLowerCase();
+        const rowDept = (r.getAttribute('data-dept') || '').trim();
+        const rowComp = (r.getAttribute('data-company') || '').trim();
+
+        let matchCat = true;
+        if (currentDeptFilter !== 'ALL') {
+          matchCat = (rowDept === currentDeptFilter || rowComp === currentDeptFilter);
+        }
+
+        let matchSearch = true;
+        if (q) {
+          matchSearch = rowSearch.includes(q);
+        }
+
+        if (matchCat && matchSearch) {
+          r.style.display = '';
+          visible++;
+        } else {
+          r.style.display = 'none';
+        }
+      });
+
+      const counterEl = document.getElementById('visibleRowCount');
+      if (counterEl) counterEl.innerText = visible;
+    }
+
+    function clearGridFilter() {
+      const input = document.getElementById('gridFilterInput');
+      if (input) input.value = '';
+      currentDeptFilter = 'ALL';
+      document.querySelectorAll('#deptFilterPills .filter-pill').forEach(btn => {
+        if (btn.getAttribute('data-filter') === 'ALL') {
+          btn.classList.add('active');
+        } else {
+          btn.classList.remove('active');
+        }
+      });
+      applyGridFilters();
+    }
+
+    // Auto-initialize default pairs and grid filter pills on page load
+    setTimeout(() => {
+      resetShortcutForm();
+      initGridFilterPills();
+    }, 50);
 
     async function saveChanges(silent = false) {
       if (autoSaveTimer) clearTimeout(autoSaveTimer);

@@ -169,12 +169,16 @@
 </head>
 <body>
   <div class="no-print-bar no-print">
-    <div>
-      <strong>officework</strong> — Printable Preview: <span>{{ company_name }} ({{ property_full }})</span>
+    <div style="display: flex; align-items: center; gap: 10px;">
+      <span style="font-size: 16px;">📄</span>
+      <div>
+        <strong style="color: #f8fafc;">officework</strong> — Printable Preview: <span style="color: #7dd3fc; font-weight: 600;">{{ company_name }} ({{ property_full }})</span>
+      </div>
     </div>
-    <div>
+    <div style="display: flex; gap: 8px; align-items: center;">
+      <button type="button" onclick="window.close()" class="btn btn-secondary" style="background: #334155; border: 1px solid #475569;">✕ Close Preview</button>
       <a href="/" class="btn btn-secondary">← Back to Dashboard</a>
-      <button onclick="window.print()" class="btn">🖨️ Print / Save PDF</button>
+      <button type="button" onclick="window.print()" class="btn">🖨️ Print / Save PDF</button>
     </div>
   </div>
 
