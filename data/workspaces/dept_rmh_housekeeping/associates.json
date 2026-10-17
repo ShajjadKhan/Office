@@ -94,5 +94,45 @@
     "company": "Work force",
     "property": "RMH",
     "department": "0430"
+  },
+  {
+    "id": 13,
+    "iqama": "2279831792",
+    "name": "FIRDHAWS",
+    "company": "Nasim Alenjaz",
+    "property": "RMH",
+    "department": "Health Club"
+  },
+  {
+    "id": 14,
+    "iqama": "2573861412",
+    "name": "MD FARDIN",
+    "company": "Nasim Alenjaz",
+    "property": "RMH",
+    "department": "Laundry"
+  },
+  {
+    "id": 15,
+    "iqama": "2528560663",
+    "name": "QAISAR",
+    "company": "Nasim Alenjaz",
+    "property": "RMH",
+    "department": "Laundry"
+  },
+  {
+    "id": 16,
+    "iqama": "2540888415",
+    "name": "MD SANAULLAH",
+    "company": "Nasim Alenjaz",
+    "property": "RMH",
+    "department": "Laundry"
+  },
+  {
+    "id": 17,
+    "iqama": "2419733072",
+    "name": "UMAR KHITAB",
+    "company": "Nasim Alenjaz",
+    "property": "RMH",
+    "department": "Front Office"
   }
 ]

@@ -2,5 +2,17 @@
   {
     "code": "0430",
     "name": "Housekeeping"
+  },
+  {
+    "code": "Health Club",
+    "name": "Health Club"
+  },
+  {
+    "code": "Laundry",
+    "name": "Laundry"
+  },
+  {
+    "code": "Front Office",
+    "name": "Front Office"
   }
 ]

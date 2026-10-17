@@ -3,6 +3,9 @@
     "RMH": "Riyadh Marriott Hotel"
   },
   "department_names": {
-    "0430": "Housekeeping"
+    "0430": "Housekeeping",
+    "Health Club": "Health Club",
+    "Laundry": "Laundry",
+    "Front Office": "Front Office"
   }
 }
