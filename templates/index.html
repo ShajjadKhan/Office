@@ -842,8 +842,8 @@
               {{ month_names[m] }}
             </option>
           {% endfor %}
-        </select>
-        <button class="btn btn-primary" onclick="saveChanges()">💾 Save Month</button>
+        <button class="btn btn-primary" id="btnSaveMonth" onclick="saveChanges()">💾 Save Month</button>
+        <span id="saveStatusIndicator" style="font-size: 12px; font-weight: 700; color: #10b981; margin-left: 6px; display: inline-flex; align-items: center; gap: 4px; transition: all 0.25s ease;"></span>
         <div style="display: inline-flex; align-items: center; gap: 8px; margin-left: 8px; padding-left: 10px; border-left: 1.5px solid var(--border);">
           <span style="font-size: 12px; font-weight: 700; color: #334155; background: #f1f5f9; border: 1px solid #cbd5e1; padding: 5px 10px; border-radius: 6px;">
             👤 {{ current_user_name }} {% if is_admin %}<span style="font-size: 10px; font-weight: 800; background: #ede9fe; color: #6d28d9; padding: 1px 5px; border-radius: 4px; margin-left: 3px;">ADMIN</span>{% endif %}
@@ -898,10 +898,10 @@
         <p>Instantly bundle all preformatted PDFs, individual Company Excel files, and Master Excel into a clean ZIP.</p>
       </div>
       <div class="export-actions">
-        <a id="btnZipAll" href="/api/export/all-zip?year={{ current_year }}&month={{ current_month }}" class="btn btn-success">📦 Download Full ZIP Package</a>
-        <a id="btnZipPdfs" href="/api/export/pdfs-zip?year={{ current_year }}&month={{ current_month }}" class="btn btn-outline" style="color: #fff; background: rgba(255,255,255,0.15);">📄 All PDFs</a>
-        <a id="btnZipExcels" href="/api/export/excels-zip?year={{ current_year }}&month={{ current_month }}" class="btn btn-outline" style="color: #fff; background: rgba(255,255,255,0.15);">📊 All Excels</a>
-        <a id="btnMasterExcel" href="/api/export/master-excel?year={{ current_year }}&month={{ current_month }}" class="btn btn-outline" style="color: #fff; background: rgba(255,255,255,0.15);">📑 Master Excel</a>
+        <a id="btnZipAll" href="/api/export/all-zip?year={{ current_year }}&month={{ current_month }}{% if active_workspace %}&ws={{ active_workspace }}{% endif %}" class="btn btn-success" onclick="return handleExportClick(event, this.href)">📦 Download Full ZIP Package</a>
+        <a id="btnZipPdfs" href="/api/export/pdfs-zip?year={{ current_year }}&month={{ current_month }}{% if active_workspace %}&ws={{ active_workspace }}{% endif %}" class="btn btn-outline" onclick="return handleExportClick(event, this.href)" style="color: #fff; background: rgba(255,255,255,0.15);">📄 All PDFs</a>
+        <a id="btnZipExcels" href="/api/export/excels-zip?year={{ current_year }}&month={{ current_month }}{% if active_workspace %}&ws={{ active_workspace }}{% endif %}" class="btn btn-outline" onclick="return handleExportClick(event, this.href)" style="color: #fff; background: rgba(255,255,255,0.15);">📊 All Excels</a>
+        <a id="btnMasterExcel" href="/api/export/master-excel?year={{ current_year }}&month={{ current_month }}{% if active_workspace %}&ws={{ active_workspace }}{% endif %}" class="btn btn-outline" onclick="return handleExportClick(event, this.href)" style="color: #fff; background: rgba(255,255,255,0.15);">📑 Master Excel</a>
       </div>
     </div>
 
@@ -1069,9 +1069,9 @@
             {% endfor %}
           </ul>
           <div class="group-actions">
-            <a href="/print/{{ g.key }}?year={{ current_year }}&month={{ current_month }}" target="_blank" class="btn btn-outline btn-sm">👁️ View / Print</a>
-            <a href="/api/export/single-pdf/{{ g.key }}?year={{ current_year }}&month={{ current_month }}" class="btn btn-outline btn-sm">📄 PDF</a>
-            <a href="/api/export/single-excel/{{ g.key }}?year={{ current_year }}&month={{ current_month }}" class="btn btn-outline btn-sm">📊 Excel</a>
+            <a href="/print/{{ g.key }}?year={{ current_year }}&month={{ current_month }}{% if active_workspace %}&ws={{ active_workspace }}{% endif %}" target="_blank" class="btn btn-outline btn-sm" onclick="return handleExportClick(event, this.href, '_blank')">👁️ View / Print</a>
+            <a href="/api/export/single-pdf/{{ g.key }}?year={{ current_year }}&month={{ current_month }}{% if active_workspace %}&ws={{ active_workspace }}{% endif %}" class="btn btn-outline btn-sm" onclick="return handleExportClick(event, this.href)">📄 PDF</a>
+            <a href="/api/export/single-excel/{{ g.key }}?year={{ current_year }}&month={{ current_month }}{% if active_workspace %}&ws={{ active_workspace }}{% endif %}" class="btn btn-outline btn-sm" onclick="return handleExportClick(event, this.href)">📊 Excel</a>
           </div>
         </div>
         {% endfor %}
@@ -1458,6 +1458,49 @@
       });
     }
 
+    let hasUnsavedChanges = false;
+    let isSaving = false;
+    let autoSaveTimer = null;
+
+    function markChangesPending() {
+      hasUnsavedChanges = true;
+      const indicator = document.getElementById('saveStatusIndicator');
+      if (indicator) {
+        indicator.style.color = '#f59e0b';
+        indicator.innerHTML = '● Unsaved changes';
+      }
+      if (autoSaveTimer) clearTimeout(autoSaveTimer);
+      autoSaveTimer = setTimeout(() => {
+        saveChanges(true);
+      }, 800);
+    }
+
+    async function handleExportClick(event, href, target) {
+      if (hasUnsavedChanges || isSaving) {
+        if (event) {
+          event.preventDefault();
+          event.stopPropagation();
+        }
+        const indicator = document.getElementById('saveStatusIndicator');
+        if (indicator) {
+          indicator.style.color = '#0284c7';
+          indicator.innerHTML = '⏳ Saving changes before download...';
+        }
+        const ok = await saveChanges(true);
+        if (!ok) {
+          alert('Could not save pending changes before exporting. Please check your connection and try again.');
+          return false;
+        }
+        if (target === '_blank') {
+          window.open(href, '_blank');
+        } else {
+          window.location.href = href;
+        }
+        return false;
+      }
+      return true;
+    }
+
     function handleCellClick(el) {
       const current = el.innerText.trim().toUpperCase();
       let next = '8';
@@ -1475,6 +1518,7 @@
         el.style.color = info.text_color;
       }
       updateRowTotals(el.closest('tr'));
+      markChangesPending();
     }
 
     function updateRowTotals(row) {
@@ -1512,6 +1556,7 @@
         }
       });
       document.querySelectorAll('tbody tr').forEach(r => updateRowTotals(r));
+      markChangesPending();
     }
 
     function autoRandomWO() {
@@ -1544,6 +1589,7 @@
         });
         updateRowTotals(row);
       });
+      markChangesPending();
     }
 
     function escapeHtml(str) {
@@ -1739,6 +1785,7 @@
       statusEl.innerText = 'Saving entry to sheet...';
       
       try {
+        const ws = '{{ active_workspace }}';
         const res = await fetch('/api/month/quick-entry', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -1746,7 +1793,8 @@
             year: y,
             month: m,
             assoc_id: assocId,
-            entries: entries
+            entries: entries,
+            ws: ws
           })
         });
         const result = await res.json();
@@ -1772,13 +1820,15 @@
       const m = parseInt(document.getElementById('selMonth').value);
       
       try {
+        const ws = '{{ active_workspace }}';
         const res = await fetch('/api/month/remove-associate', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             year: y,
             month: m,
-            assoc_id: assocId
+            assoc_id: assocId,
+            ws: ws
           })
         });
         const result = await res.json();
@@ -1795,9 +1845,11 @@
     // Auto-initialize 4 default pairs on page load
     setTimeout(resetShortcutForm, 50);
 
-    async function saveChanges() {
+    async function saveChanges(silent = false) {
+      if (autoSaveTimer) clearTimeout(autoSaveTimer);
       const y = document.getElementById('selYear').value;
       const m = document.getElementById('selMonth').value;
+      const ws = '{{ active_workspace }}';
       const payload = [];
       document.querySelectorAll('#attendanceTable tbody tr[data-assoc-id]').forEach(row => {
         const id = parseInt(row.getAttribute('data-assoc-id'));
@@ -1807,21 +1859,60 @@
         }
       });
 
+      const indicator = document.getElementById('saveStatusIndicator');
+      if (indicator) {
+        indicator.style.color = '#0284c7';
+        indicator.innerHTML = '💾 Saving...';
+      }
+      isSaving = true;
+
       try {
-        const url = '/api/save-month?year=' + encodeURIComponent(y) + '&month=' + encodeURIComponent(m);
+        let url = '/api/save-month?year=' + encodeURIComponent(y) + '&month=' + encodeURIComponent(m);
+        if (ws && ws !== 'default') {
+          url += '&ws=' + encodeURIComponent(ws);
+        }
         const res = await fetch(url, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
         });
         const data = await res.json();
+        isSaving = false;
         if (data.success) {
-          alert('✓ Month attendance successfully saved!');
+          hasUnsavedChanges = false;
+          if (indicator) {
+            indicator.style.color = '#10b981';
+            indicator.innerHTML = '✓ All changes saved';
+            setTimeout(() => {
+              if (!hasUnsavedChanges && indicator) {
+                indicator.innerHTML = '';
+              }
+            }, 3000);
+          }
+          if (!silent) {
+            alert('✓ Month attendance successfully saved!');
+          }
+          return true;
         } else {
-          alert('Failed to save: ' + (data.message || 'Unknown error'));
+          if (indicator) {
+            indicator.style.color = '#ef4444';
+            indicator.innerHTML = '⚠️ Save failed';
+          }
+          if (!silent) {
+            alert('Failed to save: ' + (data.message || 'Unknown error'));
+          }
+          return false;
         }
       } catch (err) {
-        alert('Network error while saving: ' + err);
+        isSaving = false;
+        if (indicator) {
+          indicator.style.color = '#ef4444';
+          indicator.innerHTML = '⚠️ Network error';
+        }
+        if (!silent) {
+          alert('Network error while saving: ' + err);
+        }
+        return false;
       }
     }
 

@@ -299,8 +299,24 @@ def read_month_file(year: int, month: int, workspace: str = "default") -> Option
 
 def write_month_file(year: int, month: int, data: Any, workspace: str = "default"):
     path = get_month_file_path(year, month, workspace=workspace)
+    existing = {}
+    if os.path.exists(path):
+        try:
+            with open(path, 'r', encoding='utf-8') as f:
+                c = json.load(f)
+                if isinstance(c, dict):
+                    existing = c
+        except Exception:
+            pass
+
     if isinstance(data, list):
-        data = {"associates": data}
+        existing["associates"] = data
+        data = existing
+    elif isinstance(data, dict):
+        for k, v in existing.items():
+            if k not in data:
+                data[k] = v
+
     with open(path, 'w', encoding='utf-8') as f:
         json.dump(data, f, indent=2, ensure_ascii=False)
 
@@ -549,15 +565,16 @@ async def print_report_view(
     request: Request,
     group_key: str,
     year: int = Query(default=2026),
-    month: int = Query(default=10)
+    month: int = Query(default=10),
+    ws: Optional[str] = Query(default=None)
 ):
-    ws = get_current_workspace(request)
-    data = get_month_data(year, month, workspace=ws)
+    target_ws = ws.strip() if ws and ws.strip() else get_current_workspace(request)
+    data = get_month_data(year, month, workspace=target_ws)
     target_group = next((g for g in data["groups"] if g["key"] == group_key), None)
     if not target_group:
         raise HTTPException(status_code=404, detail="Report group not found for this month")
         
-    return templates.TemplateResponse(
+    response = templates.TemplateResponse(
         request=request,
         name="report_print.html",
         context={
@@ -573,23 +590,27 @@ async def print_report_view(
             "authorizers": data["authorizers"]
         }
     )
+    response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    response.headers["Pragma"] = "no-cache"
+    return response
 
 @app.post("/api/save-month")
 async def save_month_endpoint(
     request: Request,
     year: int = Query(...),
     month: int = Query(...),
+    ws: Optional[str] = Query(default=None),
     payload: Any = Body(...)
 ):
-    ws = get_current_workspace(request)
-    write_month_file(year, month, payload, workspace=ws)
+    target_ws = ws.strip() if ws and ws.strip() else get_current_workspace(request)
+    write_month_file(year, month, payload, workspace=target_ws)
     return {"success": True, "message": f"Saved attendance for {year}-{month:02d}"}
 
 # ================= Quick Schedule Entry & Month Roster Endpoints =================
 
 @app.post("/api/month/quick-entry")
 async def month_quick_entry(request: Request, payload: Dict[str, Any] = Body(...)):
-    ws = get_current_workspace(request)
+    ws = payload.get("ws") or request.query_params.get("ws") or get_current_workspace(request)
     year = int(payload.get("year", 2026))
     month = int(payload.get("month", 10))
     assoc_id = payload.get("assoc_id")
@@ -601,8 +622,16 @@ async def month_quick_entry(request: Request, payload: Dict[str, Any] = Body(...
     month_info = get_month_info(year, month)
     days_cnt = month_info["days_in_month"]
     
-    # All days default to "8"
-    days = ["8"] * days_cnt
+    saved_content = read_month_file(year, month, workspace=ws) or {}
+    raw_list = saved_content.get("associates", []) if isinstance(saved_content, dict) else (saved_content or [])
+
+    # If associate already exists on the sheet, preserve their existing days and only update the specified entries!
+    existing_entry = next((item for item in raw_list if item.get("id") == assoc_id), None)
+    if existing_entry and isinstance(existing_entry.get("days"), list) and len(existing_entry["days"]) == days_cnt:
+        days = list(existing_entry["days"])
+    else:
+        days = ["8"] * days_cnt
+
     for e in entries:
         try:
             d = int(e.get("day", 0))
@@ -612,9 +641,6 @@ async def month_quick_entry(request: Request, payload: Dict[str, Any] = Body(...
         except (ValueError, TypeError):
             continue
             
-    saved_content = read_month_file(year, month, workspace=ws) or {}
-    raw_list = saved_content.get("associates", []) if isinstance(saved_content, dict) else (saved_content or [])
-    
     updated = False
     new_list = []
     for item in raw_list:
@@ -632,7 +658,7 @@ async def month_quick_entry(request: Request, payload: Dict[str, Any] = Body(...
 
 @app.post("/api/month/remove-associate")
 async def month_remove_associate(request: Request, payload: Dict[str, Any] = Body(...)):
-    ws = get_current_workspace(request)
+    ws = payload.get("ws") or request.query_params.get("ws") or get_current_workspace(request)
     year = int(payload.get("year", 2026))
     month = int(payload.get("month", 10))
     assoc_id = payload.get("assoc_id")
@@ -1029,10 +1055,11 @@ async def export_single_pdf(
     request: Request,
     group_key: str,
     year: int = Query(default=2026),
-    month: int = Query(default=10)
+    month: int = Query(default=10),
+    ws: Optional[str] = Query(default=None)
 ):
-    ws = get_current_workspace(request)
-    data = get_month_data(year, month, workspace=ws)
+    target_ws = ws.strip() if ws and ws.strip() else get_current_workspace(request)
+    data = get_month_data(year, month, workspace=target_ws)
     g = next((item for item in data["groups"] if item["key"] == group_key), None)
     if not g:
         raise HTTPException(status_code=404, detail="Group not found for this month")
@@ -1054,17 +1081,23 @@ async def export_single_pdf(
         authorizers=data["authorizers"]
     )
     
-    return FileResponse(file_path, media_type="application/pdf", filename=filename)
+    return FileResponse(
+        file_path,
+        media_type="application/pdf",
+        filename=filename,
+        headers={"Cache-Control": "no-cache, no-store, must-revalidate", "Pragma": "no-cache"}
+    )
 
 @app.get("/api/export/single-excel/{group_key}")
 async def export_single_excel(
     request: Request,
     group_key: str,
     year: int = Query(default=2026),
-    month: int = Query(default=10)
+    month: int = Query(default=10),
+    ws: Optional[str] = Query(default=None)
 ):
-    ws = get_current_workspace(request)
-    data = get_month_data(year, month, workspace=ws)
+    target_ws = ws.strip() if ws and ws.strip() else get_current_workspace(request)
+    data = get_month_data(year, month, workspace=target_ws)
     g = next((item for item in data["groups"] if item["key"] == group_key), None)
     if not g:
         raise HTTPException(status_code=404, detail="Group not found for this month")
@@ -1085,16 +1118,22 @@ async def export_single_excel(
         authorizers=data["authorizers"]
     )
     
-    return FileResponse(file_path, media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", filename=filename)
+    return FileResponse(
+        file_path,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        filename=filename,
+        headers={"Cache-Control": "no-cache, no-store, must-revalidate", "Pragma": "no-cache"}
+    )
 
 @app.get("/api/export/master-excel")
 async def export_master_excel(
     request: Request,
     year: int = Query(default=2026),
-    month: int = Query(default=10)
+    month: int = Query(default=10),
+    ws: Optional[str] = Query(default=None)
 ):
-    ws = get_current_workspace(request)
-    data = get_month_data(year, month, workspace=ws)
+    target_ws = ws.strip() if ws and ws.strip() else get_current_workspace(request)
+    data = get_month_data(year, month, workspace=target_ws)
     if not data["active_associates"]:
         raise HTTPException(status_code=400, detail="No associates on this month's report yet.")
     filename = f"Attendance All in Excel-{data['month_info']['month_short']}-{year}.xlsx"
@@ -1108,16 +1147,22 @@ async def export_master_excel(
         companies_list=data["companies"],
         properties_list=data["properties"]
     )
-    return FileResponse(file_path, media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", filename=filename)
+    return FileResponse(
+        file_path,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        filename=filename,
+        headers={"Cache-Control": "no-cache, no-store, must-revalidate", "Pragma": "no-cache"}
+    )
 
 @app.get("/api/export/pdfs-zip")
 async def export_pdfs_zip(
     request: Request,
     year: int = Query(default=2026),
-    month: int = Query(default=10)
+    month: int = Query(default=10),
+    ws: Optional[str] = Query(default=None)
 ):
-    ws = get_current_workspace(request)
-    data = get_month_data(year, month, workspace=ws)
+    target_ws = ws.strip() if ws and ws.strip() else get_current_workspace(request)
+    data = get_month_data(year, month, workspace=target_ws)
     if not data["active_associates"]:
         raise HTTPException(status_code=400, detail="No associates on this month's report yet.")
     zip_buffer = io.BytesIO()
@@ -1145,17 +1190,22 @@ async def export_pdfs_zip(
     return HTMLResponse(
         content=zip_buffer.getvalue(),
         media_type="application/zip",
-        headers={"Content-Disposition": f"attachment; filename={zip_filename}"}
+        headers={
+            "Content-Disposition": f"attachment; filename={zip_filename}",
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+            "Pragma": "no-cache"
+        }
     )
 
 @app.get("/api/export/excels-zip")
 async def export_excels_zip(
     request: Request,
     year: int = Query(default=2026),
-    month: int = Query(default=10)
+    month: int = Query(default=10),
+    ws: Optional[str] = Query(default=None)
 ):
-    ws = get_current_workspace(request)
-    data = get_month_data(year, month, workspace=ws)
+    target_ws = ws.strip() if ws and ws.strip() else get_current_workspace(request)
+    data = get_month_data(year, month, workspace=target_ws)
     if not data["active_associates"]:
         raise HTTPException(status_code=400, detail="No associates on this month's report yet.")
     zip_buffer = io.BytesIO()
@@ -1187,17 +1237,22 @@ async def export_excels_zip(
     return HTMLResponse(
         content=zip_buffer.getvalue(),
         media_type="application/zip",
-        headers={"Content-Disposition": f"attachment; filename={zip_filename}"}
+        headers={
+            "Content-Disposition": f"attachment; filename={zip_filename}",
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+            "Pragma": "no-cache"
+        }
     )
 
 @app.get("/api/export/all-zip")
 async def export_all_zip(
     request: Request,
     year: int = Query(default=2026),
-    month: int = Query(default=10)
+    month: int = Query(default=10),
+    ws: Optional[str] = Query(default=None)
 ):
-    ws = get_current_workspace(request)
-    data = get_month_data(year, month, workspace=ws)
+    target_ws = ws.strip() if ws and ws.strip() else get_current_workspace(request)
+    data = get_month_data(year, month, workspace=target_ws)
     if not data["active_associates"]:
         raise HTTPException(status_code=400, detail="No associates on this month's report yet.")
     zip_buffer = io.BytesIO()
@@ -1247,7 +1302,11 @@ async def export_all_zip(
     return HTMLResponse(
         content=zip_buffer.getvalue(),
         media_type="application/zip",
-        headers={"Content-Disposition": f"attachment; filename={zip_filename}"}
+        headers={
+            "Content-Disposition": f"attachment; filename={zip_filename}",
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+            "Pragma": "no-cache"
+        }
     )
 
 if __name__ == '__main__':
