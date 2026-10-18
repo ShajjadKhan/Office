@@ -109,6 +109,27 @@ def seed_history_from_saved_months(workspace: str = "default") -> List[Dict[str,
                 "file_name": f"Attendance All in Excel-{m_date.strftime('%b')}-{y}.xlsx"
             })
             
+            # Master PDF record
+            history_items.append({
+                "id": f"seed_{y}_{m}_master_pdf",
+                "created_at": datetime.datetime.fromtimestamp(m_time).isoformat(),
+                "formatted_date": f_date,
+                "action": "master_pdf",
+                "title": f"Master PDF — All Staff ({len(active_assocs)} Associates)",
+                "year": y,
+                "month": m,
+                "month_name": month_name,
+                "group_key": "",
+                "company": "All Companies",
+                "department": "Master Roster",
+                "property": "All Properties",
+                "property_full": "All Properties",
+                "associates_count": len(active_assocs),
+                "associates_summary": ", ".join(a["name"] for a in active_assocs[:5]) + ("..." if len(active_assocs) > 5 else ""),
+                "assoc_ids": [a["id"] for a in active_assocs],
+                "file_name": f"Master Attendance Report-{m_date.strftime('%b')}-{y}.pdf"
+            })
+            
             # Groups breakdown records
             groups = {}
             for a in active_assocs:

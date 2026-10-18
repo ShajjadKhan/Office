@@ -14,7 +14,7 @@ from fastapi.templating import Jinja2Templates
 
 from services.smart_attendance import get_month_info, generate_default_days, calculate_totals
 from services.excel_generator import generate_company_excel, generate_master_excel
-from services.pdf_generator import generate_company_pdf
+from services.pdf_generator import generate_company_pdf, generate_master_pdf
 from services.history_service import (
     load_history,
     record_history_entry,
@@ -1283,6 +1283,67 @@ async def export_master_excel(
         headers={"Cache-Control": "no-cache, no-store, must-revalidate", "Pragma": "no-cache"}
     )
 
+@app.get("/api/export/master-pdf")
+async def export_master_pdf(
+    request: Request,
+    year: int = Query(default=2026),
+    month: int = Query(default=10),
+    ws: Optional[str] = Query(default=None)
+):
+    target_ws = ws.strip() if ws and ws.strip() else get_current_workspace(request)
+    data = get_month_data(year, month, workspace=target_ws)
+    if not data["active_associates"]:
+        raise HTTPException(status_code=400, detail="No associates on this month's report yet.")
+        
+    filename = f"Master Attendance Report-{data['month_info']['month_short']}-{year}.pdf"
+    file_path = os.path.join(EXPORTS_DIR, filename)
+    
+    props = data["settings"].get("properties", {})
+    prop_codes = set(a.get("property", "RMH") for a in data["active_associates"])
+    if len(prop_codes) == 1:
+        prop_full = resolve_property_full_name(list(prop_codes)[0], props)
+    else:
+        prop_full = "Riyadh Marriott Hotel & Associated Properties"
+        
+    generate_master_pdf(
+        file_path=file_path,
+        month_info=data["month_info"],
+        associates=data["active_associates"],
+        property_full=prop_full,
+        settings=data["settings"],
+        stamps=data["stamps"],
+        authorizers=data["authorizers"]
+    )
+    
+    try:
+        active_list = data["active_associates"]
+        cnt = len(active_list)
+        record_history_entry(
+            action="master_pdf",
+            title=f"Master PDF — All Staff ({cnt} Associates)",
+            year=year,
+            month=month,
+            workspace=target_ws,
+            group_key="",
+            company="All Companies",
+            department="Master Roster",
+            property_code="All",
+            property_full="All Properties",
+            associates_count=cnt,
+            associates_summary=", ".join(a["name"] for a in active_list[:5]) + ("..." if cnt > 5 else ""),
+            assoc_ids=[a["id"] for a in active_list],
+            file_name=filename
+        )
+    except Exception as e:
+        print(f"Warning recording history on Master PDF export: {e}")
+
+    return FileResponse(
+        file_path,
+        media_type="application/pdf",
+        filename=filename,
+        headers={"Cache-Control": "no-cache, no-store, must-revalidate", "Pragma": "no-cache"}
+    )
+
 @app.get("/api/export/pdfs-zip")
 async def export_pdfs_zip(
     request: Request,
@@ -1296,6 +1357,20 @@ async def export_pdfs_zip(
         raise HTTPException(status_code=400, detail="No associates on this month's report yet.")
     zip_buffer = io.BytesIO()
     with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as z:
+        # Include Master PDF at top of PDFs ZIP
+        master_pdf_name = f"00.Master-Attendance-Report-{data['month_info']['month_short']}-{year}.pdf"
+        master_pdf_path = os.path.join(EXPORTS_DIR, master_pdf_name)
+        generate_master_pdf(
+            file_path=master_pdf_path,
+            month_info=data["month_info"],
+            associates=data["active_associates"],
+            property_full="Riyadh Marriott Hotel",
+            settings=data["settings"],
+            stamps=data["stamps"],
+            authorizers=data["authorizers"]
+        )
+        z.write(master_pdf_path, arcname=master_pdf_name)
+
         for idx, g in enumerate(data["groups"], start=1):
             emp_abbr = "+".join(a["name"].split()[0] for a in g["associates"])
             pdf_name = f"{idx:02d}.({g['property']})-{g['company'].replace(' ', '_')}-{emp_abbr}-{data['month_info']['month_short']}-{year}.pdf"
@@ -1408,6 +1483,20 @@ async def export_all_zip(
             )
             z.write(temp_path, arcname=xl_name)
             
+        # Include Master PDF at top of PDFs folder
+        master_pdf_name = f"00.Master-Attendance-Report-{data['month_info']['month_short']}-{year}.pdf"
+        master_pdf_path = os.path.join(EXPORTS_DIR, master_pdf_name)
+        generate_master_pdf(
+            file_path=master_pdf_path,
+            month_info=data["month_info"],
+            associates=data["active_associates"],
+            property_full="Riyadh Marriott Hotel",
+            settings=data["settings"],
+            stamps=data["stamps"],
+            authorizers=data["authorizers"]
+        )
+        z.write(master_pdf_path, arcname=f"PDFs/{master_pdf_name}")
+
         for idx, g in enumerate(data["groups"], start=1):
             emp_abbr = "+".join(a["name"].split()[0] for a in g["associates"])
             pdf_name = f"PDFs/{idx:02d}.({g['property']})-{g['company'].replace(' ', '_')}-{emp_abbr}-{data['month_info']['month_short']}-{year}.pdf"
