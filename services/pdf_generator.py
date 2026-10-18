@@ -13,25 +13,6 @@ def hex_to_color(hex_str: str, default: colors.Color):
     except Exception:
         return default
 
-class DynamicBottomSpacer(Spacer):
-    """
-    Dynamically expands to push the signature block toward the bottom of the page
-    without exceeding the available page height or triggering an unwanted second page.
-    """
-    def __init__(self, reserve_height: float, min_space: float = 25.0, max_space: float = 340.0):
-        super().__init__(1, min_space)
-        self.reserve_height = reserve_height
-        self.min_space = min_space
-        self.max_space = max_space
-
-    def wrap(self, availWidth, availHeight):
-        remaining = availHeight - self.reserve_height
-        if remaining > self.min_space:
-            self.height = min(remaining, self.max_space)
-        else:
-            self.height = self.min_space
-        return availWidth, self.height
-
 def generate_company_pdf(
     file_path: str,
     property_name: str,
@@ -215,9 +196,8 @@ def generate_company_pdf(
         ])
     sig_table.setStyle(TableStyle(t_sig_styles))
 
-    # Dynamically position signatures toward the bottom of the page
-    _, sig_h = sig_table.wrap(tot_sig_width, 500)
-    story.append(DynamicBottomSpacer(reserve_height=sig_h + 10, min_space=25, max_space=340))
+    # 6 boxes (rows) space after table (~18pt per row * 6 = 108pt)
+    story.append(Spacer(1, 108))
     story.append(sig_table)
     
     doc.build(story)

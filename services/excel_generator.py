@@ -193,17 +193,8 @@ def generate_company_excel(
         
         current_row += 1
         
-    while current_row < 15:
-        ws1[f"B{current_row}"].border = THIN_BORDER
-        ws1[f"C{current_row}"].border = THIN_BORDER
-        for d_idx in range(days_cnt):
-            ws1.cell(row=current_row, column=5 + d_idx).border = THIN_BORDER
-        ws1[f"{tot_hrs_col}{current_row}"].border = THIN_BORDER
-        ws1[f"{work_col}{current_row}"].border = THIN_BORDER
-        current_row += 1
-        
-    # Dynamic Signatures Row
-    sig_row = max(current_row + 5, 26)
+    # Dynamic Signatures Row: exactly 6 boxes (rows) after the grid table
+    sig_row = current_row + 6
     if authorizers is not None:
         active_auths = [a for a in authorizers if a.get("is_active", True)]
     else:

@@ -33,12 +33,10 @@
         border: none !important;
         padding: 0 !important;
         width: 100% !important;
-        min-height: calc(100vh - 20mm) !important;
-        display: flex !important;
-        flex-direction: column !important;
+        min-height: auto !important;
       }
       .signature-section {
-        margin-top: auto !important;
+        margin-top: 130px !important; /* 6 boxes / rows gap after grid table */
         padding-bottom: 5mm !important;
       }
     }
@@ -73,9 +71,6 @@
       box-shadow: 0 4px 16px rgba(0,0,0,0.06);
       padding: 32px 36px;
       border-radius: 6px;
-      min-height: 680px;
-      display: flex;
-      flex-direction: column;
     }
     .hotel-name {
       font-size: 20px;
@@ -110,7 +105,7 @@
       width: 100%;
       border-collapse: collapse;
       font-size: 10px;
-      margin-bottom: 40px;
+      margin-bottom: 0;
     }
     table.attendance-grid th, table.attendance-grid td {
       border: 1px solid #64748b;
@@ -140,8 +135,8 @@
     .signature-section {
       display: flex;
       justify-content: space-around;
-      margin-top: auto;
-      padding: 40px 20px 0 20px;
+      margin-top: 130px; /* 6 boxes / rows gap after grid table */
+      padding: 0 20px 20px 20px;
       flex-wrap: wrap;
       gap: 20px;
     }
