@@ -267,33 +267,37 @@
       z-index: 10;
     }
 
-    /* Sticky Col 0: Index / Row # */
+    /* Sticky Col 0: Index / Row # & Checkbox */
     table.data-table th.col-sticky-num {
       position: sticky;
       left: 0;
       top: 0;
       z-index: 25;
       background: #f8fafc;
-      width: 44px;
-      min-width: 44px;
-      max-width: 44px;
+      width: 60px;
+      min-width: 60px;
+      max-width: 60px;
       border-right: 1px solid #e2e8f0;
+      padding: 4px 2px;
+      text-align: center;
     }
     table.data-table td.col-sticky-num {
       position: sticky;
       left: 0;
       z-index: 5;
       background: #ffffff;
-      width: 44px;
-      min-width: 44px;
-      max-width: 44px;
+      width: 60px;
+      min-width: 60px;
+      max-width: 60px;
       border-right: 1px solid #e2e8f0;
+      padding: 4px 2px;
+      text-align: center;
     }
 
     /* Sticky Col 1: Associate Name & Iqama */
     table.data-table th.col-sticky-name {
       position: sticky;
-      left: 44px;
+      left: 60px;
       top: 0;
       z-index: 25;
       background: #f8fafc;
@@ -310,7 +314,7 @@
       padding-left: 10px;
       white-space: nowrap;
       position: sticky;
-      left: 44px;
+      left: 60px;
       background: #ffffff;
       z-index: 5;
       width: 185px;
@@ -326,6 +330,15 @@
     table.data-table tbody tr:hover td.col-sticky-num,
     table.data-table tbody tr:hover td.col-sticky-name {
       background-color: #f1f5f9;
+    }
+
+    /* Row selected for bulk operations */
+    table.data-table tbody tr.row-selected td {
+      background-color: #ffe4e6 !important;
+    }
+    table.data-table tbody tr.row-selected td.col-sticky-num,
+    table.data-table tbody tr.row-selected td.col-sticky-name {
+      background-color: #fecdd3 !important;
     }
 
     /* Active highlighted row */
@@ -1103,8 +1116,36 @@
         <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;" id="deptFilterPills">
           <!-- Populated by JS -->
         </div>
-        <div id="gridRowCounter" style="font-size: 12px; font-weight: 700; color: #475569; margin-left: auto;">
-          Showing <span id="visibleRowCount">{{ associates|length }}</span> of {{ associates|length }} associates
+        <div style="display: flex; align-items: center; gap: 10px; margin-left: auto;">
+          <button type="button" class="btn btn-outline btn-sm" id="btnQuickSelectToggle" onclick="toggleQuickSelect()" style="font-size: 12px; font-weight: 700; background: #fff; padding: 5px 11px; display: flex; align-items: center; gap: 5px; border-color: #cbd5e1;" title="Select or deselect all visible associates">
+            <span>☑️</span> <span id="quickSelectLabel">Select All</span>
+          </button>
+          <div id="gridRowCounter" style="font-size: 12px; font-weight: 700; color: #475569;">
+            Showing <span id="visibleRowCount">{{ associates|length }}</span> of {{ associates|length }} associates
+          </div>
+        </div>
+      </div>
+
+      <!-- Bulk Selection & Action Bar -->
+      <div id="bulkActionBar" style="display: none; background: #fff1f2; border-bottom: 2px solid #fecdd3; padding: 9px 16px; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;">
+        <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+          <span style="font-size: 13px; font-weight: 800; color: #be123c; display: flex; align-items: center; gap: 6px;">
+            <span style="display: inline-block; width: 8px; height: 8px; background: #e11d48; border-radius: 50%;"></span>
+            <span id="bulkSelectedCount">0</span> selected for removal
+          </span>
+          <div style="display: flex; gap: 6px;">
+            <button type="button" class="btn btn-outline btn-sm" onclick="selectAllFiltered(true)" style="background: #fff; border-color: #fda4af; color: #9f1239; font-size: 11px; padding: 3px 8px; font-weight: 600;">
+              ✓ Select All Visible (<span id="bulkVisibleCount">{{ associates|length }}</span>)
+            </button>
+            <button type="button" class="btn btn-outline btn-sm" onclick="clearAllSelections()" style="background: #fff; border-color: #fda4af; color: #9f1239; font-size: 11px; padding: 3px 8px; font-weight: 600;">
+              ✕ Deselect All
+            </button>
+          </div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <button type="button" class="btn btn-danger btn-sm" id="btnBulkRemoveConfirm" onclick="bulkRemoveSelectedFromMonth()" style="background: #e11d48; border-color: #be123c; padding: 7px 16px; font-weight: 700; font-size: 13px; display: flex; align-items: center; gap: 6px; box-shadow: 0 2px 4px rgba(225,29,72,0.25); cursor: pointer;">
+            <span>🗑️</span> Remove Selected (<span id="bulkBtnCount">0</span>) from {{ month_info.month_name }} Sheet
+          </button>
         </div>
       </div>
 
@@ -1112,7 +1153,12 @@
         <table class="data-table" id="attendanceTable">
           <thead>
             <tr>
-              <th class="col-sticky-num">#</th>
+              <th class="col-sticky-num" title="Select / deselect all visible rows">
+                <div style="display: flex; align-items: center; justify-content: center; gap: 4px;">
+                  <input type="checkbox" id="masterGridCheckbox" onchange="toggleSelectAllRows(this.checked)" style="cursor: pointer; width: 14px; height: 14px; margin: 0; accent-color: #e11d48;" title="Select all visible">
+                  <span style="font-size: 11px; font-weight: 700; color: #64748b;">#</span>
+                </div>
+              </th>
               <th class="col-sticky-name">Associate Name</th>
               <th style="width: 110px;">Company</th>
               <th style="width: 50px;">Prop</th>
@@ -1140,8 +1186,9 @@
                 data-prop="{{ assoc.property or '' }}"
                 data-search="{{ (assoc.name ~ ' ' ~ assoc.iqama ~ ' ' ~ (assoc.company or '') ~ ' ' ~ (assoc.department or '') ~ ' ' ~ (assoc.property or ''))|lower }}">
               <td class="col-sticky-num">
-                <div style="display: flex; align-items: center; justify-content: center; gap: 3px;">
-                  <span>{{ loop.index }}</span>
+                <div style="display: flex; align-items: center; justify-content: center; gap: 4px;">
+                  <input type="checkbox" class="row-select-checkbox" value="{{ assoc.id }}" data-name="{{ assoc.name|escape }}" onchange="handleRowCheckboxChange(this)" style="cursor: pointer; width: 14px; height: 14px; margin: 0; accent-color: #e11d48;" title="Select {{ assoc.name|escape }} for removal">
+                  <span class="row-index-num" style="font-size: 11px; min-width: 14px; text-align: center; color: #64748b; font-weight: 600;">{{ loop.index }}</span>
                   <button type="button" class="btn-row-del" onclick="removeAssociateFromMonth({{ assoc.id }}, '{{ assoc.name|escape }}')" title="Remove from this month's report">🗑️</button>
                 </div>
               </td>
@@ -2056,6 +2103,170 @@
       }
     }
 
+    /* ================= Bulk Select & Remove Implementation ================= */
+    function handleRowCheckboxChange(cb) {
+      const tr = cb.closest('tr');
+      if (tr) {
+        tr.classList.toggle('row-selected', cb.checked);
+      }
+      updateBulkActionUI();
+    }
+
+    function toggleSelectAllRows(forceState = null) {
+      const masterCb = document.getElementById('masterGridCheckbox');
+      const targetState = (forceState !== null) ? forceState : (masterCb ? masterCb.checked : true);
+      
+      const rows = document.querySelectorAll('#attendanceTable tbody tr[data-assoc-id]');
+      rows.forEach(r => {
+        if (r.style.display !== 'none') {
+          const cb = r.querySelector('.row-select-checkbox');
+          if (cb) {
+            cb.checked = targetState;
+            r.classList.toggle('row-selected', targetState);
+          }
+        }
+      });
+      updateBulkActionUI();
+    }
+
+    function toggleQuickSelect() {
+      const visibleRows = Array.from(document.querySelectorAll('#attendanceTable tbody tr[data-assoc-id]')).filter(r => r.style.display !== 'none');
+      const anyUnchecked = visibleRows.some(r => {
+        const cb = r.querySelector('.row-select-checkbox');
+        return cb && !cb.checked;
+      });
+      toggleSelectAllRows(anyUnchecked);
+    }
+
+    function selectAllFiltered(state = true) {
+      toggleSelectAllRows(state);
+    }
+
+    function clearAllSelections() {
+      const cbs = document.querySelectorAll('.row-select-checkbox');
+      cbs.forEach(cb => {
+        cb.checked = false;
+        const tr = cb.closest('tr');
+        if (tr) tr.classList.remove('row-selected');
+      });
+      const masterCb = document.getElementById('masterGridCheckbox');
+      if (masterCb) {
+        masterCb.checked = false;
+        masterCb.indeterminate = false;
+      }
+      updateBulkActionUI();
+    }
+
+    function updateBulkActionUI() {
+      const allRows = Array.from(document.querySelectorAll('#attendanceTable tbody tr[data-assoc-id]'));
+      const visibleRows = allRows.filter(r => r.style.display !== 'none');
+      const checkedBoxes = Array.from(document.querySelectorAll('.row-select-checkbox:checked'));
+      const checkedCount = checkedBoxes.length;
+
+      const visibleCheckedCount = visibleRows.filter(r => {
+        const cb = r.querySelector('.row-select-checkbox');
+        return cb && cb.checked;
+      }).length;
+
+      // Master Checkbox in table header
+      const masterCb = document.getElementById('masterGridCheckbox');
+      if (masterCb) {
+        if (visibleCheckedCount === 0 || visibleRows.length === 0) {
+          masterCb.checked = false;
+          masterCb.indeterminate = false;
+        } else if (visibleCheckedCount === visibleRows.length) {
+          masterCb.checked = true;
+          masterCb.indeterminate = false;
+        } else {
+          masterCb.checked = false;
+          masterCb.indeterminate = true;
+        }
+      }
+
+      // Quick Select button label
+      const quickLabel = document.getElementById('quickSelectLabel');
+      if (quickLabel) {
+        if (visibleCheckedCount > 0 && visibleCheckedCount === visibleRows.length) {
+          quickLabel.innerText = 'Deselect All';
+        } else {
+          quickLabel.innerText = 'Select All';
+        }
+      }
+
+      // Bulk Action Bar
+      const bar = document.getElementById('bulkActionBar');
+      const countEl = document.getElementById('bulkSelectedCount');
+      const btnCountEl = document.getElementById('bulkBtnCount');
+      const visCountEl = document.getElementById('bulkVisibleCount');
+
+      if (visCountEl) visCountEl.innerText = visibleRows.length;
+
+      if (bar) {
+        if (checkedCount > 0) {
+          bar.style.display = 'flex';
+          if (countEl) countEl.innerText = checkedCount;
+          if (btnCountEl) btnCountEl.innerText = checkedCount;
+        } else {
+          bar.style.display = 'none';
+        }
+      }
+    }
+
+    async function bulkRemoveSelectedFromMonth() {
+      const checkedBoxes = Array.from(document.querySelectorAll('.row-select-checkbox:checked'));
+      if (checkedBoxes.length === 0) {
+        alert('Please select at least one associate using the checkboxes.');
+        return;
+      }
+
+      const ids = checkedBoxes.map(cb => parseInt(cb.value)).filter(id => !isNaN(id));
+      const count = ids.length;
+
+      if (!confirm(`Are you sure you want to remove ${count} selected associate(s) from this month's report?\n\n(Note: They will remain safely in your Master Staff Database and can be re-added anytime)`)) {
+        return;
+      }
+
+      const btn = document.getElementById('btnBulkRemoveConfirm');
+      const originalText = btn ? btn.innerHTML : '';
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '⏳ Removing...';
+      }
+
+      const y = parseInt(document.getElementById('selYear').value);
+      const m = parseInt(document.getElementById('selMonth').value);
+      const ws = '{{ active_workspace }}';
+
+      try {
+        const res = await fetch('/api/month/bulk-remove-associates', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            year: y,
+            month: m,
+            assoc_ids: ids,
+            ws: ws
+          })
+        });
+        const result = await res.json();
+        if (result.success) {
+          window.location.reload();
+        } else {
+          alert('Error removing associates: ' + (result.detail || result.message || 'Unknown error'));
+          if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+          }
+        }
+      } catch (err) {
+        alert('Network error: ' + err);
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = originalText;
+        }
+      }
+    }
+
     // ================= Grid Real-Time Search & Department/Company Filtering =================
     let currentDeptFilter = 'ALL';
 
@@ -2156,6 +2367,7 @@
 
       const counterEl = document.getElementById('visibleRowCount');
       if (counterEl) counterEl.innerText = visible;
+      updateBulkActionUI();
     }
 
     function clearGridFilter() {

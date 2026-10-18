@@ -657,21 +657,57 @@ async def month_quick_entry(request: Request, payload: Dict[str, Any] = Body(...
     return {"success": True, "message": "Associate schedule saved to sheet"}
 
 @app.post("/api/month/remove-associate")
+@app.post("/api/month/bulk-remove-associates")
 async def month_remove_associate(request: Request, payload: Dict[str, Any] = Body(...)):
     ws = payload.get("ws") or request.query_params.get("ws") or get_current_workspace(request)
     year = int(payload.get("year", 2026))
     month = int(payload.get("month", 10))
-    assoc_id = payload.get("assoc_id")
-    if assoc_id is None:
-        raise HTTPException(status_code=400, detail="Associate ID is required")
-    assoc_id = int(assoc_id)
+    
+    ids_to_remove = set()
+    assoc_ids = payload.get("assoc_ids")
+    if assoc_ids is not None and isinstance(assoc_ids, list):
+        for aid in assoc_ids:
+            try:
+                ids_to_remove.add(int(aid))
+            except (ValueError, TypeError):
+                continue
+    elif payload.get("assoc_id") is not None:
+        try:
+            ids_to_remove.add(int(payload.get("assoc_id")))
+        except (ValueError, TypeError):
+            pass
+
+    if not ids_to_remove:
+        raise HTTPException(status_code=400, detail="Associate ID(s) required")
     
     saved_content = read_month_file(year, month, workspace=ws) or {}
     raw_list = saved_content.get("associates", []) if isinstance(saved_content, dict) else (saved_content or [])
     
-    new_list = [item for item in raw_list if item.get("id") != assoc_id]
+    new_list = [item for item in raw_list if item.get("id") not in ids_to_remove]
     write_month_file(year, month, {"associates": new_list}, workspace=ws)
-    return {"success": True, "message": "Associate removed from this month's sheet"}
+    return {
+        "success": True,
+        "message": f"{len(ids_to_remove)} associate(s) removed from sheet",
+        "removed_ids": list(ids_to_remove),
+        "count": len(ids_to_remove)
+    }
+
+@app.post("/api/employees/bulk-delete")
+async def bulk_delete_employees(request: Request, payload: Dict[str, Any] = Body(...)):
+    ws = get_current_workspace(request)
+    ids = payload.get("ids", [])
+    if not isinstance(ids, list) or not ids:
+        raise HTTPException(status_code=400, detail="Employee IDs required")
+    ids_set = set()
+    for x in ids:
+        try:
+            ids_set.add(int(x))
+        except (ValueError, TypeError):
+            continue
+    associates = load_associates(workspace=ws)
+    associates = [a for a in associates if a.get("id") not in ids_set]
+    save_json('associates.json', associates, workspace=ws)
+    return {"success": True, "message": f"{len(ids_set)} associates deleted", "associates": associates}
 
 # ================= Configuration & Master Data Endpoints =================
 
