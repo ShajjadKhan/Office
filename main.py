@@ -15,6 +15,12 @@ from fastapi.templating import Jinja2Templates
 from services.smart_attendance import get_month_info, generate_default_days, calculate_totals
 from services.excel_generator import generate_company_excel, generate_master_excel
 from services.pdf_generator import generate_company_pdf
+from services.history_service import (
+    load_history,
+    record_history_entry,
+    delete_history_entry,
+    clear_all_history_entries
+)
 from services.auth_service import (
     authenticate_user,
     create_session,
@@ -473,7 +479,8 @@ async def dashboard_view(
     request: Request,
     year: int = Query(default=2026),
     month: int = Query(default=10),
-    ws: Optional[str] = Query(default=None)
+    ws: Optional[str] = Query(default=None),
+    group: Optional[str] = Query(default=None)
 ):
     current_username = getattr(request.state, "user", "shajjad")
     u = get_user(current_username)
@@ -553,7 +560,9 @@ async def dashboard_view(
             "companies": data["companies"],
             "properties": data["properties"],
             "departments": data["departments"],
-            "stamps": data["stamps"]
+            "stamps": data["stamps"],
+            "initial_group": (group or "").strip(),
+            "history": load_history(workspace=active_ws)
         }
     )
     if is_admin and ws and ws.strip():
@@ -604,6 +613,28 @@ async def save_month_endpoint(
 ):
     target_ws = ws.strip() if ws and ws.strip() else get_current_workspace(request)
     write_month_file(year, month, payload, workspace=target_ws)
+    try:
+        d = get_month_data(year, month, workspace=target_ws)
+        active_list = d.get("active_associates", [])
+        cnt = len(active_list)
+        record_history_entry(
+            action="save",
+            title=f"Saved Attendance Grid ({cnt} Staff)",
+            year=year,
+            month=month,
+            workspace=target_ws,
+            group_key="",
+            company="All Companies",
+            department="Roster Save",
+            property_code="All",
+            property_full="All Properties",
+            associates_count=cnt,
+            associates_summary=", ".join(a["name"] for a in active_list[:5]) + ("..." if cnt > 5 else ""),
+            assoc_ids=[a["id"] for a in active_list],
+            file_name=f"{year}_{month:02d}.json"
+        )
+    except Exception as e:
+        print(f"Warning recording history on save: {e}")
     return {"success": True, "message": f"Saved attendance for {year}-{month:02d}"}
 
 # ================= Quick Schedule Entry & Month Roster Endpoints =================
@@ -1117,6 +1148,26 @@ async def export_single_pdf(
         authorizers=data["authorizers"]
     )
     
+    try:
+        record_history_entry(
+            action="pdf",
+            title=f"{g['company']} — {g['department']}",
+            year=year,
+            month=month,
+            workspace=target_ws,
+            group_key=group_key,
+            company=g["company"],
+            department=g["department"],
+            property_code=g["property"],
+            property_full=g["property_full"],
+            associates_count=len(g["associates"]),
+            associates_summary=", ".join(a["name"] for a in g["associates"]),
+            assoc_ids=[a["id"] for a in g["associates"]],
+            file_name=filename
+        )
+    except Exception as e:
+        print(f"Warning recording history on PDF export: {e}")
+    
     return FileResponse(
         file_path,
         media_type="application/pdf",
@@ -1154,6 +1205,26 @@ async def export_single_excel(
         authorizers=data["authorizers"]
     )
     
+    try:
+        record_history_entry(
+            action="excel",
+            title=f"{g['company']} — {g['department']}",
+            year=year,
+            month=month,
+            workspace=target_ws,
+            group_key=group_key,
+            company=g["company"],
+            department=g["department"],
+            property_code=g["property"],
+            property_full=g["property_full"],
+            associates_count=len(g["associates"]),
+            associates_summary=", ".join(a["name"] for a in g["associates"]),
+            assoc_ids=[a["id"] for a in g["associates"]],
+            file_name=filename
+        )
+    except Exception as e:
+        print(f"Warning recording history on Excel export: {e}")
+    
     return FileResponse(
         file_path,
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -1183,6 +1254,28 @@ async def export_master_excel(
         companies_list=data["companies"],
         properties_list=data["properties"]
     )
+    try:
+        active_list = data["active_associates"]
+        cnt = len(active_list)
+        record_history_entry(
+            action="master_excel",
+            title=f"Master Excel — All Staff ({cnt} Associates)",
+            year=year,
+            month=month,
+            workspace=target_ws,
+            group_key="",
+            company="All Companies",
+            department="Master Roster",
+            property_code="All",
+            property_full="All Properties",
+            associates_count=cnt,
+            associates_summary=", ".join(a["name"] for a in active_list[:5]) + ("..." if cnt > 5 else ""),
+            assoc_ids=[a["id"] for a in active_list],
+            file_name=filename
+        )
+    except Exception as e:
+        print(f"Warning recording history on Master Excel export: {e}")
+
     return FileResponse(
         file_path,
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -1335,6 +1428,28 @@ async def export_all_zip(
             
     zip_buffer.seek(0)
     zip_filename = f"officework-Package-{data['month_info']['month_short']}-{year}.zip"
+    try:
+        active_list = data["active_associates"]
+        cnt = len(active_list)
+        record_history_entry(
+            action="all_zip",
+            title=f"Full Package ZIP — All Reports ({cnt} Associates)",
+            year=year,
+            month=month,
+            workspace=target_ws,
+            group_key="",
+            company="All Companies",
+            department="Full Package",
+            property_code="All",
+            property_full="All Properties",
+            associates_count=cnt,
+            associates_summary=", ".join(a["name"] for a in active_list[:5]) + ("..." if cnt > 5 else ""),
+            assoc_ids=[a["id"] for a in active_list],
+            file_name=zip_filename
+        )
+    except Exception as e:
+        print(f"Warning recording history on All ZIP export: {e}")
+
     return HTMLResponse(
         content=zip_buffer.getvalue(),
         media_type="application/zip",
@@ -1344,6 +1459,25 @@ async def export_all_zip(
             "Pragma": "no-cache"
         }
     )
+
+# ================= History & Saved Sheets Endpoints =================
+
+@app.get("/api/history")
+async def get_history_endpoint(request: Request, ws: Optional[str] = Query(default=None)):
+    target_ws = ws.strip() if ws and ws.strip() else get_current_workspace(request)
+    return {"success": True, "history": load_history(workspace=target_ws)}
+
+@app.delete("/api/history/{item_id}")
+async def delete_history_endpoint(request: Request, item_id: str, ws: Optional[str] = Query(default=None)):
+    target_ws = ws.strip() if ws and ws.strip() else get_current_workspace(request)
+    success = delete_history_entry(item_id, workspace=target_ws)
+    return {"success": success, "history": load_history(workspace=target_ws)}
+
+@app.post("/api/history/clear")
+async def clear_history_endpoint(request: Request, ws: Optional[str] = Query(default=None)):
+    target_ws = ws.strip() if ws and ws.strip() else get_current_workspace(request)
+    clear_all_history_entries(workspace=target_ws)
+    return {"success": True, "history": []}
 
 if __name__ == '__main__':
     import uvicorn

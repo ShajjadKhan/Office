@@ -1097,6 +1097,37 @@
         </div>
       </div>
 
+      <!-- Isolated Sheet Re-Edit Banner (Appears when a company/dept sheet is isolated) -->
+      <div id="sheetIsolationBanner" style="display: none; background: linear-gradient(135deg, #0284c7, #0369a1); color: #ffffff; padding: 12px 18px; border-radius: 8px; margin-bottom: 14px; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; box-shadow: 0 4px 6px -1px rgba(2, 132, 199, 0.25);">
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <span style="font-size: 24px;">✏️</span>
+          <div>
+            <div style="font-size: 14px; font-weight: 800; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+              <span>Editing Sheet: <span id="isolatedSheetTitle" style="text-decoration: underline;">Company</span></span>
+              <span id="isolatedStaffBadge" style="background: rgba(255,255,255,0.22); font-size: 11px; padding: 2px 8px; border-radius: 9999px; font-weight: 700;">3 staff</span>
+              <span style="background: #fef08a; color: #854d0e; font-size: 11px; padding: 2px 8px; border-radius: 9999px; font-weight: 800;">{{ month_info.label }}</span>
+            </div>
+            <div style="font-size: 12px; color: #e0f2fe; margin-top: 3px;">
+              Only associates on this sheet are displayed on the grid. Edit cells freely, then click Re-Generate below.
+            </div>
+          </div>
+        </div>
+        <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+          <button type="button" class="btn btn-sm" onclick="saveChanges(false)" style="background: #10b981; color: white; font-weight: 700; border: none; padding: 7px 14px; display: flex; align-items: center; gap: 5px; cursor: pointer;">
+            <span>💾</span> Save Changes
+          </button>
+          <a id="btnIsolatedExcel" href="#" class="btn btn-sm" onclick="return handleExportClick(event, this.href)" style="background: #ffffff; color: #0284c7; font-weight: 700; border: none; padding: 7px 14px; display: flex; align-items: center; gap: 5px; cursor: pointer;">
+            <span>📊</span> Re-Generate Excel
+          </a>
+          <a id="btnIsolatedPdf" href="#" class="btn btn-sm" onclick="return handleExportClick(event, this.href)" style="background: rgba(255,255,255,0.18); color: #ffffff; font-weight: 700; border: 1px solid rgba(255,255,255,0.4); padding: 7px 14px; display: flex; align-items: center; gap: 5px; cursor: pointer;">
+            <span>📄</span> Re-Generate PDF
+          </a>
+          <button type="button" class="btn btn-sm" onclick="clearSheetIsolation()" style="background: rgba(0,0,0,0.3); color: #ffffff; font-weight: 700; border: none; padding: 7px 12px; cursor: pointer;" title="Show all staff on grid">
+            ✕ Show Full Grid
+          </button>
+        </div>
+      </div>
+
       <!-- Grid Real-Time Search & Department/Company Filter Bar -->
       <div class="grid-filter-bar" style="display: flex; gap: 12px; align-items: center; justify-content: space-between; padding: 10px 16px; background: #f8fafc; border-bottom: 1px solid var(--border); flex-wrap: wrap;">
         <div style="display: flex; gap: 8px; align-items: center; flex: 1; min-width: 260px; max-width: 460px;">
@@ -1180,7 +1211,9 @@
           </thead>
           <tbody>
             {% for assoc in associates %}
+            {% set row_group_key = (assoc.property ~ '_' ~ (assoc.company or '') ~ '_' ~ (assoc.department or ''))|replace(' ', '_')|replace('-', '_') %}
             <tr data-assoc-id="{{ assoc.id }}"
+                data-group-key="{{ row_group_key }}"
                 data-dept="{{ assoc.department or '' }}"
                 data-company="{{ assoc.company or '' }}"
                 data-prop="{{ assoc.property or '' }}"
@@ -1266,13 +1299,150 @@
               </li>
             {% endfor %}
           </ul>
-          <div class="group-actions">
-            <a href="/print/{{ g.key }}?year={{ current_year }}&month={{ current_month }}{% if active_workspace %}&ws={{ active_workspace }}{% endif %}" target="_blank" class="btn btn-outline btn-sm" onclick="return handleExportClick(event, this.href, '_blank')">👁️ View / Print</a>
+          <div class="group-actions" style="display: flex; gap: 6px; flex-wrap: wrap;">
+            <button type="button" class="btn btn-primary btn-sm" onclick="isolateSheetOnGrid('{{ g.key }}', '{{ g.company|escape }}', '{{ g.department|escape }}')" style="background: #0284c7; border-color: #0369a1; font-weight: 700;">✏️ Edit in Grid</button>
+            <a href="/print/{{ g.key }}?year={{ current_year }}&month={{ current_month }}{% if active_workspace %}&ws={{ active_workspace }}{% endif %}" target="_blank" class="btn btn-outline btn-sm" onclick="return handleExportClick(event, this.href, '_blank')">👁️ View</a>
             <a href="/api/export/single-pdf/{{ g.key }}?year={{ current_year }}&month={{ current_month }}{% if active_workspace %}&ws={{ active_workspace }}{% endif %}" class="btn btn-outline btn-sm" onclick="return handleExportClick(event, this.href)">📄 PDF</a>
             <a href="/api/export/single-excel/{{ g.key }}?year={{ current_year }}&month={{ current_month }}{% if active_workspace %}&ws={{ active_workspace }}{% endif %}" class="btn btn-outline btn-sm" onclick="return handleExportClick(event, this.href)">📊 Excel</a>
           </div>
         </div>
         {% endfor %}
+      </div>
+    </div>
+
+    <!-- Generated Reports & Re-Edit History Card -->
+    <div class="card" id="historySectionCard" style="margin-top: 24px;">
+      <div class="card-header" style="flex-wrap: wrap; gap: 12px;">
+        <div>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="font-size: 20px;">📁</span>
+            <h2 class="card-title" style="margin: 0;">Generated Reports & Re-Edit History</h2>
+            <span id="historyTotalBadge" class="badge" style="background: #e0f2fe; color: #0369a1; font-weight: 700;">{{ history|length }} entries</span>
+          </div>
+          <p style="font-size: 13px; color: var(--text-muted); margin-top: 3px;">
+            Past & current sheets generated or saved. Click <strong>"✏️ Re-Edit in Grid"</strong> on any entry to immediately load its exact month, isolate its staff on the grid, make changes, and re-generate.
+          </p>
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <button type="button" class="btn btn-outline btn-sm" onclick="clearAllHistory()" style="color: #be123c; border-color: #fecdd3; font-weight: 600;" title="Clear history log">
+            🗑️ Clear History
+          </button>
+        </div>
+      </div>
+
+      <!-- History Filter Bar -->
+      <div style="display: flex; gap: 12px; align-items: center; justify-content: space-between; padding: 10px 14px; background: #f8fafc; border: 1px solid var(--border); border-radius: 8px; margin-bottom: 14px; flex-wrap: wrap;">
+        <div style="display: flex; gap: 8px; align-items: center; flex: 1; min-width: 240px; max-width: 440px;">
+          <input type="text"
+                 id="historySearchInput"
+                 placeholder="🔍 Search history by title, company, month, associate..."
+                 style="width: 100%; padding: 7px 12px; font-size: 13px; border: 1px solid #cbd5e1; border-radius: 6px; outline: none; background: #fff;"
+                 oninput="filterHistoryEntries()">
+        </div>
+        <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;" id="historyPeriodPills">
+          <!-- Populated by JS for unique months -->
+        </div>
+      </div>
+
+      <!-- History Table Container -->
+      <div class="table-responsive" style="max-height: 520px; overflow-y: auto;">
+        <table class="data-table" style="width: 100%;" id="historyTable">
+          <thead>
+            <tr>
+              <th style="width: 155px;">Generated Date</th>
+              <th style="min-width: 220px;">Sheet / Report</th>
+              <th style="width: 120px;">Period</th>
+              <th style="min-width: 240px;">Staff Included</th>
+              <th style="width: 270px; text-align: right;">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="historyTableBody">
+            {% for h in history %}
+            <tr class="history-row"
+                data-hist-id="{{ h.id }}"
+                data-group-key="{{ h.group_key }}"
+                data-year="{{ h.year }}"
+                data-month="{{ h.month }}"
+                data-month-name="{{ h.month_name }}"
+                data-company="{{ h.company|escape }}"
+                data-dept="{{ h.department|escape }}"
+                data-action="{{ h.action }}"
+                data-search="{{ (h.title ~ ' ' ~ h.month_name ~ ' ' ~ h.company ~ ' ' ~ h.department ~ ' ' ~ h.property ~ ' ' ~ h.associates_summary)|lower }}">
+              <td style="font-size: 11px; color: var(--text-muted); white-space: nowrap;">
+                <div>{{ h.formatted_date }}</div>
+                {% if h.file_name %}
+                  <div style="font-family: monospace; font-size: 10px; color: #94a3b8; overflow: hidden; text-overflow: ellipsis; max-width: 140px;" title="{{ h.file_name }}">{{ h.file_name }}</div>
+                {% endif %}
+              </td>
+              <td>
+                <div style="display: flex; align-items: center; gap: 6px;">
+                  {% if h.action == 'excel' %}
+                    <span class="tag" style="background: #ecfdf5; color: #047857; font-size: 10px;">📊 Excel</span>
+                  {% elif h.action == 'pdf' %}
+                    <span class="tag" style="background: #fef2f2; color: #b91c1c; font-size: 10px;">📄 PDF</span>
+                  {% elif h.action == 'master_excel' %}
+                    <span class="tag" style="background: #eff6ff; color: #1d4ed8; font-size: 10px;">📑 Master Excel</span>
+                  {% elif h.action == 'save' %}
+                    <span class="tag" style="background: #f8fafc; color: #475569; font-size: 10px;">💾 Saved Sheet</span>
+                  {% else %}
+                    <span class="tag" style="background: #f1f5f9; color: #334155; font-size: 10px;">📦 Package</span>
+                  {% endif %}
+                  <strong style="font-size: 13px; color: #0f172a;">{{ h.title }}</strong>
+                </div>
+                <div style="font-size: 11px; color: #64748b; margin-top: 2px;">
+                  {% if h.property %}<span class="badge" style="font-size: 10px;">{{ h.property }}</span>{% endif %}
+                  {% if h.company and h.company != 'All Companies' %}<span>{{ h.company }}</span>{% endif %}
+                  {% if h.department and h.department != 'Master Roster' %}<span>• {{ h.department }}</span>{% endif %}
+                </div>
+              </td>
+              <td>
+                <span class="badge" style="background: #fef08a; color: #854d0e; font-weight: 700; font-size: 11px;">
+                  📅 {{ h.month_name }}
+                </span>
+              </td>
+              <td style="font-size: 12px;">
+                <div style="font-weight: 700; color: #334155;">{{ h.associates_count }} Staff</div>
+                <div style="font-size: 11px; color: #64748b; margin-top: 1px;" title="{{ h.associates_summary }}">{{ h.associates_summary }}</div>
+              </td>
+              <td style="text-align: right; white-space: nowrap;">
+                <div style="display: flex; gap: 5px; justify-content: flex-end; align-items: center;">
+                  <button type="button"
+                          class="btn btn-sm"
+                          onclick="reEditFromHistory('{{ h.group_key }}', {{ h.year }}, {{ h.month }}, '{{ h.company|escape }}', '{{ h.department|escape }}')"
+                          style="background: #0284c7; color: #fff; font-weight: 700; border: none; padding: 5px 10px; font-size: 12px; display: inline-flex; align-items: center; gap: 4px; cursor: pointer;"
+                          title="Open on attendance grid to edit and re-generate">
+                    <span>✏️</span> Re-Edit in Grid
+                  </button>
+                  {% if h.action == 'excel' and h.group_key %}
+                    <a href="/api/export/single-excel/{{ h.group_key }}?year={{ h.year }}&month={{ h.month }}{% if active_workspace %}&ws={{ active_workspace }}{% endif %}" class="btn btn-outline btn-sm" onclick="return handleExportClick(event, this.href)" title="Download / Re-generate Excel" style="padding: 5px 8px; font-size: 11px;">
+                      📊 Excel
+                    </a>
+                  {% elif h.action == 'pdf' and h.group_key %}
+                    <a href="/api/export/single-pdf/{{ h.group_key }}?year={{ h.year }}&month={{ h.month }}{% if active_workspace %}&ws={{ active_workspace }}{% endif %}" class="btn btn-outline btn-sm" onclick="return handleExportClick(event, this.href)" title="Download / Re-generate PDF" style="padding: 5px 8px; font-size: 11px;">
+                      📄 PDF
+                    </a>
+                  {% elif h.action == 'master_excel' %}
+                    <a href="/api/export/master-excel?year={{ h.year }}&month={{ h.month }}{% if active_workspace %}&ws={{ active_workspace }}{% endif %}" class="btn btn-outline btn-sm" onclick="return handleExportClick(event, this.href)" title="Download Master Excel" style="padding: 5px 8px; font-size: 11px;">
+                      📑 Excel
+                    </a>
+                  {% endif %}
+                  <button type="button" class="btn btn-outline btn-sm" onclick="deleteHistoryItem('{{ h.id }}')" style="padding: 5px 7px; color: #94a3b8; border-color: #e2e8f0; cursor: pointer;" title="Remove this history log">
+                    🗑️
+                  </button>
+                </div>
+              </td>
+            </tr>
+            {% else %}
+            <tr id="historyEmptyRow">
+              <td colspan="5" style="text-align: center; padding: 36px 16px; color: #94a3b8; font-size: 13px;">
+                <div style="font-size: 28px; margin-bottom: 6px;">📂</div>
+                <div>No generation history recorded yet.</div>
+                <div style="font-size: 11px; margin-top: 4px;">Exporting an Excel workbook, PDF report, or saving a month will automatically record history here.</div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
       </div>
     </div>
   </div>
@@ -1620,6 +1790,9 @@
     let companiesData = {{ companies|tojson }};
     let propertiesData = {{ properties|tojson }};
     let departmentsData = {{ departments|tojson }};
+    let groupsData = {{ groups|tojson }};
+    let historyData = {{ history|tojson }};
+    let initialGroupKey = {{ (initial_group or '')|tojson }};
     let activeStamp = 'TOGGLE';
 
     function getStampInfo(code) {
@@ -2334,6 +2507,8 @@
       applyGridFilters();
     }
 
+    let currentlyIsolatedGroupKey = null;
+
     function applyGridFilters() {
       const q = (document.getElementById('gridFilterInput')?.value || '').trim().toLowerCase();
       const clearBtn = document.getElementById('btnGridClear');
@@ -2341,6 +2516,23 @@
 
       const rows = document.querySelectorAll('#attendanceTable tbody tr[data-assoc-id]');
       let visible = 0;
+
+      if (currentlyIsolatedGroupKey) {
+        rows.forEach(r => {
+          const rowGroup = r.getAttribute('data-group-key') || '';
+          const rowSearch = (r.getAttribute('data-search') || '').toLowerCase();
+          if (rowGroup === currentlyIsolatedGroupKey && (!q || rowSearch.includes(q))) {
+            r.style.display = '';
+            visible++;
+          } else {
+            r.style.display = 'none';
+          }
+        });
+        const counterEl = document.getElementById('visibleRowCount');
+        if (counterEl) counterEl.innerText = `${visible} of ${associatesData.length} (Isolated Sheet)`;
+        updateBulkActionUI();
+        return;
+      }
 
       rows.forEach(r => {
         const rowSearch = (r.getAttribute('data-search') || '').toLowerCase();
@@ -2384,11 +2576,248 @@
       applyGridFilters();
     }
 
-    // Auto-initialize default pairs and grid filter pills on page load
+    // ================= Isolated Sheet Re-Edit Mode =================
+    function isolateSheetOnGrid(groupKey, companyName = '', deptName = '', scroll = true) {
+      if (!groupKey) return;
+      currentlyIsolatedGroupKey = groupKey;
+
+      const g = groupsData.find(item => item.key === groupKey);
+      const title = companyName || (g ? g.company : '') || 'Isolated Sheet';
+      const dept = deptName || (g ? g.department : '');
+
+      const rows = document.querySelectorAll('#attendanceTable tbody tr[data-assoc-id]');
+      let matchedCount = 0;
+
+      rows.forEach(r => {
+        const rowGroup = r.getAttribute('data-group-key') || '';
+        const rowComp = (r.getAttribute('data-company') || '').trim();
+        const rowDept = (r.getAttribute('data-dept') || '').trim();
+        
+        let isMatch = (rowGroup === groupKey);
+        if (!isMatch && companyName && deptName) {
+          isMatch = (rowComp.toLowerCase() === companyName.toLowerCase() && rowDept.toLowerCase() === deptName.toLowerCase());
+        }
+
+        if (isMatch) {
+          r.style.display = '';
+          matchedCount++;
+        } else {
+          r.style.display = 'none';
+        }
+      });
+
+      // Update Isolated Banner UI
+      const banner = document.getElementById('sheetIsolationBanner');
+      const titleEl = document.getElementById('isolatedSheetTitle');
+      const badgeEl = document.getElementById('isolatedStaffBadge');
+      const btnExcel = document.getElementById('btnIsolatedExcel');
+      const btnPdf = document.getElementById('btnIsolatedPdf');
+
+      if (titleEl) {
+        titleEl.innerText = dept ? `${title} — ${dept}` : title;
+      }
+      if (badgeEl) {
+        badgeEl.innerText = `${matchedCount} staff`;
+      }
+
+      const curYear = document.getElementById('selYear').value;
+      const curMonth = document.getElementById('selMonth').value;
+      const curWs = '{{ active_workspace }}';
+      const wsParam = curWs ? `&ws=${encodeURIComponent(curWs)}` : '';
+
+      if (btnExcel) {
+        btnExcel.href = `/api/export/single-excel/${encodeURIComponent(groupKey)}?year=${curYear}&month=${curMonth}${wsParam}`;
+      }
+      if (btnPdf) {
+        btnPdf.href = `/api/export/single-pdf/${encodeURIComponent(groupKey)}?year=${curYear}&month=${curMonth}${wsParam}`;
+      }
+
+      if (banner) {
+        banner.style.display = 'flex';
+      }
+
+      const counterEl = document.getElementById('visibleRowCount');
+      if (counterEl) {
+        counterEl.innerText = `${matchedCount} of ${associatesData.length} (Isolated Sheet)`;
+      }
+
+      updateBulkActionUI();
+
+      if (scroll && banner) {
+        banner.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }
+
+    function clearSheetIsolation() {
+      currentlyIsolatedGroupKey = null;
+      const banner = document.getElementById('sheetIsolationBanner');
+      if (banner) banner.style.display = 'none';
+
+      // Clean URL query param without reload
+      try {
+        const url = new URL(window.location);
+        if (url.searchParams.has('group')) {
+          url.searchParams.delete('group');
+          window.history.replaceState({}, '', url);
+        }
+      } catch (e) {}
+
+      applyGridFilters();
+    }
+
+    function reEditFromHistory(groupKey, year, month, company = '', dept = '') {
+      const curYear = parseInt(document.getElementById('selYear').value);
+      const curMonth = parseInt(document.getElementById('selMonth').value);
+
+      if (year === curYear && month === curMonth) {
+        if (groupKey && groupKey !== 'master') {
+          isolateSheetOnGrid(groupKey, company, dept, true);
+        } else {
+          clearSheetIsolation();
+          const table = document.getElementById('attendanceTable');
+          if (table) table.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      } else {
+        const curWs = '{{ active_workspace }}';
+        let targetUrl = `/?year=${year}&month=${month}`;
+        if (groupKey && groupKey !== 'master') {
+          targetUrl += `&group=${encodeURIComponent(groupKey)}`;
+        }
+        if (curWs && curWs !== 'default') {
+          targetUrl += `&ws=${encodeURIComponent(curWs)}`;
+        }
+        window.location.href = targetUrl;
+      }
+    }
+
+    // ================= History Filter & Management =================
+    let activeHistoryPeriod = 'ALL';
+
+    function initHistoryPeriodPills() {
+      const container = document.getElementById('historyPeriodPills');
+      if (!container) return;
+
+      const rows = document.querySelectorAll('#historyTableBody tr.history-row');
+      if (rows.length === 0) {
+        container.innerHTML = '';
+        return;
+      }
+
+      const periods = {};
+      rows.forEach(r => {
+        const p = (r.getAttribute('data-month-name') || '').trim();
+        if (p) {
+          periods[p] = (periods[p] || 0) + 1;
+        }
+      });
+
+      let html = `<button type="button" class="filter-pill active" data-period="ALL" onclick="setHistoryPeriodFilter('ALL')">All (${rows.length})</button>`;
+      Object.keys(periods).forEach(p => {
+        html += `<button type="button" class="filter-pill" data-period="${escapeHtml(p)}" onclick="setHistoryPeriodFilter('${escapeHtml(p)}')">${escapeHtml(p)} (${periods[p]})</button>`;
+      });
+      container.innerHTML = html;
+    }
+
+    function setHistoryPeriodFilter(period) {
+      activeHistoryPeriod = period;
+      document.querySelectorAll('#historyPeriodPills .filter-pill').forEach(btn => {
+        btn.classList.toggle('active', btn.getAttribute('data-period') === period);
+      });
+      filterHistoryEntries();
+    }
+
+    function filterHistoryEntries() {
+      const q = (document.getElementById('historySearchInput')?.value || '').trim().toLowerCase();
+      const rows = document.querySelectorAll('#historyTableBody tr.history-row');
+      let visible = 0;
+
+      rows.forEach(r => {
+        const search = (r.getAttribute('data-search') || '').toLowerCase();
+        const period = (r.getAttribute('data-month-name') || '').trim();
+
+        const matchPeriod = (activeHistoryPeriod === 'ALL' || period === activeHistoryPeriod);
+        const matchSearch = (!q || search.includes(q));
+
+        if (matchPeriod && matchSearch) {
+          r.style.display = '';
+          visible++;
+        } else {
+          r.style.display = 'none';
+        }
+      });
+
+      const badge = document.getElementById('historyTotalBadge');
+      if (badge) {
+        badge.innerText = `${visible} entries`;
+      }
+    }
+
+    async function deleteHistoryItem(itemId) {
+      if (!confirm('Remove this generated report record from history?')) return;
+      const ws = '{{ active_workspace }}';
+      try {
+        const res = await fetch(`/api/history/${encodeURIComponent(itemId)}?ws=${encodeURIComponent(ws)}`, {
+          method: 'DELETE'
+        });
+        const data = await res.json();
+        if (data.success) {
+          const row = document.querySelector(`tr[data-hist-id="${itemId}"]`);
+          if (row) {
+            row.remove();
+          }
+          filterHistoryEntries();
+          initHistoryPeriodPills();
+        } else {
+          alert('Could not delete history record');
+        }
+      } catch (e) {
+        alert('Network error: ' + e);
+      }
+    }
+
+    async function clearAllHistory() {
+      if (!confirm('Are you sure you want to clear all history records?')) return;
+      const ws = '{{ active_workspace }}';
+      try {
+        const res = await fetch(`/api/history/clear?ws=${encodeURIComponent(ws)}`, {
+          method: 'POST'
+        });
+        const data = await res.json();
+        if (data.success) {
+          const tbody = document.getElementById('historyTableBody');
+          if (tbody) {
+            tbody.innerHTML = `
+              <tr id="historyEmptyRow">
+                <td colspan="5" style="text-align: center; padding: 36px 16px; color: #94a3b8; font-size: 13px;">
+                  <div style="font-size: 28px; margin-bottom: 6px;">📂</div>
+                  <div>No generation history recorded yet.</div>
+                  <div style="font-size: 11px; margin-top: 4px;">Exporting an Excel workbook, PDF report, or saving a month will automatically record history here.</div>
+                </td>
+              </tr>
+            `;
+          }
+          const badge = document.getElementById('historyTotalBadge');
+          if (badge) badge.innerText = '0 entries';
+          initHistoryPeriodPills();
+        }
+      } catch (e) {
+        alert('Network error: ' + e);
+      }
+    }
+
+    // Auto-initialize default pairs, grid filter pills, and history on page load
     setTimeout(() => {
       resetShortcutForm();
       initGridFilterPills();
-    }, 50);
+      initHistoryPeriodPills();
+
+      // Auto-isolate if group query was passed or initialGroupKey
+      const urlParams = new URLSearchParams(window.location.search);
+      const groupParam = urlParams.get('group') || initialGroupKey;
+      if (groupParam) {
+        isolateSheetOnGrid(groupParam, '', '', true);
+      }
+    }, 60);
 
     async function saveChanges(silent = false) {
       if (autoSaveTimer) clearTimeout(autoSaveTimer);

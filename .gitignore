@@ -16,7 +16,8 @@ exports/*
 # OS & IDE
 .DS_Store
 .idea/
-.vscode/
 *.bak
 data/sessions.json
 data/.api_key
+export_history.json
+**/export_history.json
