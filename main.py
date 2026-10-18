@@ -687,6 +687,51 @@ async def month_quick_entry(request: Request, payload: Dict[str, Any] = Body(...
     write_month_file(year, month, {"associates": new_list}, workspace=ws)
     return {"success": True, "message": "Associate schedule saved to sheet"}
 
+@app.post("/api/month/add-all-employees")
+async def month_add_all_employees(request: Request, payload: Dict[str, Any] = Body(...)):
+    ws = payload.get("ws") or request.query_params.get("ws") or get_current_workspace(request)
+    year = int(payload.get("year", 2026))
+    month = int(payload.get("month", 10))
+    
+    all_associates = load_associates(workspace=ws)
+    if not all_associates:
+        raise HTTPException(status_code=400, detail="No recorded associates found in master staff list.")
+        
+    month_info = get_month_info(year, month)
+    days_cnt = month_info["days_in_month"]
+    
+    saved_content = read_month_file(year, month, workspace=ws) or {}
+    raw_list = saved_content.get("associates", []) if isinstance(saved_content, dict) else (saved_content or [])
+    
+    existing_ids = set(item.get("id") for item in raw_list if item.get("id") is not None)
+    
+    new_list = list(raw_list)
+    added_count = 0
+    
+    for assoc in all_associates:
+        aid = assoc.get("id")
+        if aid is not None and aid not in existing_ids:
+            new_list.append({
+                "id": aid,
+                "days": ["8"] * days_cnt
+            })
+            existing_ids.add(aid)
+            added_count += 1
+            
+    write_month_file(year, month, {"associates": new_list}, workspace=ws)
+    
+    if added_count == 0:
+        msg = f"All {len(all_associates)} recorded associates are already on the {month_info['label']} sheet."
+    else:
+        msg = f"Successfully added {added_count} associate(s) to {month_info['label']} sheet (Total {len(new_list)} staff active)."
+        
+    return {
+        "success": True,
+        "message": msg,
+        "added_count": added_count,
+        "total_count": len(new_list)
+    }
+
 @app.post("/api/month/remove-associate")
 @app.post("/api/month/bulk-remove-associates")
 async def month_remove_associate(request: Request, payload: Dict[str, Any] = Body(...)):
