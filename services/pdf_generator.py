@@ -28,10 +28,10 @@ def generate_company_pdf(
     doc = SimpleDocTemplate(
         file_path,
         pagesize=landscape(A4),
-        leftMargin=24,
-        rightMargin=24,
-        topMargin=24,
-        bottomMargin=24
+        leftMargin=20,
+        rightMargin=20,
+        topMargin=16,
+        bottomMargin=16
     )
     
     story = []
@@ -57,24 +57,24 @@ def generate_company_pdf(
         'DocTitle',
         parent=styles['Normal'],
         fontName='Helvetica-Bold',
-        fontSize=14,
-        leading=16,
+        fontSize=13,
+        leading=15,
         textColor=colors.HexColor('#0F172A')
     )
     subtitle_style = ParagraphStyle(
         'DocSub',
         parent=styles['Normal'],
         fontName='Helvetica-Bold',
-        fontSize=11,
-        leading=14,
+        fontSize=10.5,
+        leading=13,
         textColor=colors.HexColor('#334155')
     )
     meta_style = ParagraphStyle(
         'DocMeta',
         parent=styles['Normal'],
         fontName='Helvetica',
-        fontSize=9,
-        leading=12,
+        fontSize=8.5,
+        leading=11,
         textColor=colors.HexColor('#475569')
     )
     meta_bold = ParagraphStyle(
@@ -89,19 +89,44 @@ def generate_company_pdf(
     story.append(Paragraph(property_full, title_style))
     story.append(Paragraph("Daily Attendance Transaction Report", subtitle_style))
     story.append(Paragraph(f"Transaction Period From  {period_str}", meta_style))
-    story.append(Spacer(1, 6))
+    story.append(Spacer(1, 4))
     
     story.append(Paragraph(company_name.upper(), meta_bold))
     story.append(Paragraph(f"Department: {department}", meta_style))
-    story.append(Spacer(1, 10))
+    story.append(Spacer(1, 8))
     
     header_row = ["SL", "Employee Name"]
     for d in range(1, days_cnt + 1):
         header_row.append(str(d))
-    header_row.extend(["Total hours", "Work"])
+    header_row.extend(["Total\nHours", "Work\nDays"])
     
     table_data = [header_row]
+    n_real = len(associates)
     
+    tot_width = 841.89 - 40  # 801.89 pt
+    fixed_widths = 24 + 140 + 36 + 26  # 226 pt
+    day_col_width = (tot_width - fixed_widths) / days_cnt
+    col_widths = [24, 140] + [day_col_width] * days_cnt + [36, 26]
+    
+    # Calculate row layout & padding to fit and balance the full page
+    target_rows = max(n_real, 10)
+    tot_rows = target_rows + 1  # Including header
+    if tot_rows <= 11:
+        padding = 6.0
+        font_sz = 8.0
+        hdr_font_sz = 8.5
+        spacer_h = 35
+    elif tot_rows <= 15:
+        padding = 5.0
+        font_sz = 7.5
+        hdr_font_sz = 8.0
+        spacer_h = 30
+    else:
+        padding = 3.5
+        font_sz = 7.0
+        hdr_font_sz = 7.5
+        spacer_h = 24
+        
     t_styles = [
         ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#94A3B8')),
         ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#F1F5F9')),
@@ -109,11 +134,13 @@ def generate_company_pdf(
         ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
         ('ALIGN', (1, 1), (1, -1), 'LEFT'),
         ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-        ('FONTSIZE', (0, 0), (-1, 0), 7.5),
+        ('FONTSIZE', (0, 0), (-1, 0), hdr_font_sz),
         ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
-        ('FONTSIZE', (0, 1), (-1, -1), 7.0),
-        ('TOPPADDING', (0, 0), (-1, -1), 4),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+        ('FONTSIZE', (0, 1), (-1, -1), font_sz),
+        ('TOPPADDING', (0, 0), (-1, -1), padding),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), padding),
+        ('LEFTPADDING', (2, 0), (-1, -1), 0.5),
+        ('RIGHTPADDING', (2, 0), (-1, -1), 0.5),
     ]
     
     row_idx = 1
@@ -146,9 +173,11 @@ def generate_company_pdf(
         table_data.append(row_vals)
         row_idx += 1
         
-    day_col_width = (790 - 225) / days_cnt
-    col_widths = [22, 128] + [day_col_width] * days_cnt + [45, 30]
-    
+    # Standard grid lines fill up to target_rows for clean, full-page format
+    for r in range(n_real + 1, target_rows + 1):
+        table_data.append([str(r), ""] + [""] * days_cnt + ["", ""])
+        row_idx += 1
+        
     t = Table(table_data, colWidths=col_widths, repeatRows=1)
     t.setStyle(TableStyle(t_styles))
     story.append(t)
@@ -160,15 +189,14 @@ def generate_company_pdf(
         active_auths = [
             {"title": "Department Head", "name": ""},
             {"title": "Director of Human Resource", "name": ""},
-            {"title": "Director of Finance", "name": ""}
+            {"title": "Director of Finance", "name": ""},
+            {"title": "General Manager", "name": ""}
         ]
     if not active_auths:
         active_auths = [{"title": "Department Head", "name": ""}]
         
     n_auths = len(active_auths)
-    tot_sig_width = 780.0
-    col_w = tot_sig_width / n_auths
-    
+    col_w = tot_width / n_auths
     has_names = any(bool(a.get("name", "").strip()) for a in active_auths)
     
     sig_data = [
@@ -184,20 +212,19 @@ def generate_company_pdf(
         ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
         ('FONTNAME', (0, 0), (-1, 0), 'Helvetica'),
         ('FONTNAME', (0, 1), (-1, 1), 'Helvetica-Bold'),
-        ('FONTSIZE', (0, 1), (-1, 1), 9),
+        ('FONTSIZE', (0, 1), (-1, 1), 8.5),
         ('TEXTCOLOR', (0, 0), (-1, -1), colors.HexColor('#1E293B')),
-        ('BOTTOMPADDING', (0, 0), (-1, 0), 6),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 5),
     ]
     if has_names:
         t_sig_styles.extend([
             ('FONTNAME', (0, 2), (-1, 2), 'Helvetica'),
-            ('FONTSIZE', (0, 2), (-1, 2), 8),
+            ('FONTSIZE', (0, 2), (-1, 2), 7.5),
             ('TEXTCOLOR', (0, 2), (-1, 2), colors.HexColor('#64748B')),
         ])
     sig_table.setStyle(TableStyle(t_sig_styles))
 
-    # 6 boxes (rows) space after table (~18pt per row * 6 = 108pt)
-    story.append(Spacer(1, 108))
+    story.append(Spacer(1, spacer_h))
     story.append(sig_table)
     
     doc.build(story)
@@ -215,10 +242,10 @@ def generate_master_pdf(
     doc = SimpleDocTemplate(
         file_path,
         pagesize=landscape(A4),
-        leftMargin=18,
-        rightMargin=18,
-        topMargin=16,
-        bottomMargin=16
+        leftMargin=16,
+        rightMargin=16,
+        topMargin=14,
+        bottomMargin=14
     )
     
     story = []
@@ -244,15 +271,15 @@ def generate_master_pdf(
         'MasterDocTitle',
         parent=styles['Normal'],
         fontName='Helvetica-Bold',
-        fontSize=12,
-        leading=14,
+        fontSize=13,
+        leading=15,
         textColor=colors.HexColor('#0F172A')
     )
     subtitle_style = ParagraphStyle(
         'MasterDocSub',
         parent=styles['Normal'],
         fontName='Helvetica-Bold',
-        fontSize=9.5,
+        fontSize=10,
         leading=12,
         textColor=colors.HexColor('#334155')
     )
@@ -260,23 +287,55 @@ def generate_master_pdf(
         'MasterDocMeta',
         parent=styles['Normal'],
         fontName='Helvetica',
-        fontSize=8,
-        leading=10,
+        fontSize=8.5,
+        leading=11,
         textColor=colors.HexColor('#475569')
     )
     
     story.append(Paragraph(property_full, title_style))
     story.append(Paragraph("Master Daily Attendance Transaction Report", subtitle_style))
     story.append(Paragraph(f"Transaction Period From  {period_str} — ALL COMPANIES & DEPARTMENTS", meta_style))
-    story.append(Spacer(1, 6))
+    story.append(Spacer(1, 8))
     
     header_row = ["SL", "Associate Name", "Company", "Department"]
     for d in range(1, days_cnt + 1):
         header_row.append(str(d))
-    header_row.extend(["Total hours", "Work"])
+    header_row.extend(["Total\nHours", "Work\nDays"])
     
     table_data = [header_row]
+    n_assoc = len(associates)
     
+    tot_table_width = 841.89 - 32  # 809.89 pt
+    fixed_widths = 18 + 125 + 76 + 65 + 32 + 24  # 340 pt
+    day_col_width = (tot_table_width - fixed_widths) / days_cnt
+    col_widths = [18, 125, 76, 65] + [day_col_width] * days_cnt + [32, 24]
+    
+    # Calculate padding based on associate count to optimize 1-page full layout
+    if n_assoc <= 12:
+        padding = 5.5
+        font_sz = 7.5
+        hdr_font_sz = 8.0
+        spacer_h = 35
+        target_rows = 12
+    elif n_assoc <= 17:
+        padding = 4.5
+        font_sz = 7.0
+        hdr_font_sz = 7.5
+        spacer_h = 32
+        target_rows = n_assoc
+    elif n_assoc <= 22:
+        padding = 3.0
+        font_sz = 6.5
+        hdr_font_sz = 7.0
+        spacer_h = 24
+        target_rows = n_assoc
+    else:
+        padding = 3.5
+        font_sz = 7.0
+        hdr_font_sz = 7.5
+        spacer_h = 36
+        target_rows = n_assoc
+        
     t_styles = [
         ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#94A3B8')),
         ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#F1F5F9')),
@@ -285,11 +344,13 @@ def generate_master_pdf(
         ('ALIGN', (1, 1), (1, -1), 'LEFT'),
         ('ALIGN', (2, 1), (3, -1), 'LEFT'),
         ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-        ('FONTSIZE', (0, 0), (-1, 0), 6.5),
+        ('FONTSIZE', (0, 0), (-1, 0), hdr_font_sz),
         ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
-        ('FONTSIZE', (0, 1), (-1, -1), 6.0),
-        ('TOPPADDING', (0, 0), (-1, -1), 2.0),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 2.0),
+        ('FONTSIZE', (0, 1), (-1, -1), font_sz),
+        ('TOPPADDING', (0, 0), (-1, -1), padding),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), padding),
+        ('LEFTPADDING', (4, 0), (-1, -1), 0.5),
+        ('RIGHTPADDING', (4, 0), (-1, -1), 0.5),
     ]
     
     row_idx = 1
@@ -325,11 +386,11 @@ def generate_master_pdf(
         table_data.append(row_vals)
         row_idx += 1
         
-    tot_table_width = 805.89
-    fixed_widths = 16 + 105 + 62 + 52 + 34 + 22  # 291 pt
-    day_col_width = (tot_table_width - fixed_widths) / days_cnt
-    col_widths = [16, 105, 62, 52] + [day_col_width] * days_cnt + [34, 22]
-    
+    # If fewer than target_rows, add neat grid rows so the report fills the page
+    for r in range(n_assoc + 1, target_rows + 1):
+        table_data.append([str(r), "", "", ""] + [""] * days_cnt + ["", ""])
+        row_idx += 1
+        
     t = Table(table_data, colWidths=col_widths, repeatRows=1)
     t.setStyle(TableStyle(t_styles))
     story.append(t)
@@ -341,7 +402,8 @@ def generate_master_pdf(
         active_auths = [
             {"title": "Department Head", "name": ""},
             {"title": "Director of Human Resource", "name": ""},
-            {"title": "Director of Finance", "name": ""}
+            {"title": "Director of Finance", "name": ""},
+            {"title": "General Manager", "name": ""}
         ]
     if not active_auths:
         active_auths = [{"title": "Department Head", "name": ""}]
@@ -363,9 +425,9 @@ def generate_master_pdf(
         ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
         ('FONTNAME', (0, 0), (-1, 0), 'Helvetica'),
         ('FONTNAME', (0, 1), (-1, 1), 'Helvetica-Bold'),
-        ('FONTSIZE', (0, 1), (-1, 1), 8),
+        ('FONTSIZE', (0, 1), (-1, 1), 8.5),
         ('TEXTCOLOR', (0, 0), (-1, -1), colors.HexColor('#1E293B')),
-        ('BOTTOMPADDING', (0, 0), (-1, 0), 4),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 5),
     ]
     if has_names:
         t_sig_styles.extend([
@@ -375,9 +437,7 @@ def generate_master_pdf(
         ])
     sig_table.setStyle(TableStyle(t_sig_styles))
 
-    # 6 boxes space (~48pt if <=22 associates to fit exactly on 1 page; 72pt if >22)
-    spacer_height = 48 if len(associates) <= 22 else 72
-    story.append(Spacer(1, spacer_height))
+    story.append(Spacer(1, spacer_h))
     story.append(sig_table)
     
     doc.build(story)
