@@ -162,7 +162,6 @@ def generate_company_excel(
         work_parts = []
         if "8" in paid_codes:
             work_parts.append(f"COUNTIF({first_d_col}{current_row}:{last_d_col}{current_row}, 8)")
-            work_parts.append(f"COUNTIF({first_d_col}{current_row}:{last_d_col}{current_row}, \"8\")")
         for pc in paid_codes:
             if pc != "8":
                 work_parts.append(f"COUNTIF({first_d_col}{current_row}:{last_d_col}{current_row}, \"{pc}\")")
@@ -180,7 +179,6 @@ def generate_company_excel(
             if "8" in paid_codes:
                 h = stamp_hours["8"]
                 tot_parts.append(f"COUNTIF({first_d_col}{current_row}:{last_d_col}{current_row}, 8)*{int(h) if h.is_integer() else h}")
-                tot_parts.append(f"COUNTIF({first_d_col}{current_row}:{last_d_col}{current_row}, \"8\")*{int(h) if h.is_integer() else h}")
             for pc in paid_codes:
                 if pc != "8":
                     h = stamp_hours[pc]
@@ -368,7 +366,6 @@ def generate_master_excel(
         if "8" in paid_codes:
             h = stamp_hours["8"]
             tot_parts.append(f"COUNTIF({first_d_col}{current_row}:{last_d_col}{current_row}, 8)*{int(h) if h.is_integer() else h}")
-            tot_parts.append(f"COUNTIF({first_d_col}{current_row}:{last_d_col}{current_row}, \"8\")*{int(h) if h.is_integer() else h}")
         for pc in paid_codes:
             if pc != "8":
                 h = stamp_hours[pc]
