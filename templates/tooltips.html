@@ -1,0 +1,496 @@
+<!-- ==============================================================================
+     OfficeWork Intelligent Tooltip Engine
+     Contextual, brief "what it's used for" tooltips for buttons, stamps, cells & controls
+     ============================================================================== -->
+<style>
+  .ow-tooltip {
+    position: fixed;
+    z-index: 99999999;
+    pointer-events: none;
+    background: #0f172a;
+    color: #f8fafc;
+    padding: 7px 11px;
+    border-radius: 7px;
+    font-size: 11.5px;
+    font-weight: 500;
+    line-height: 1.35;
+    letter-spacing: 0.01em;
+    max-width: 310px;
+    min-width: 110px;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 4px 6px -2px rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    opacity: 0;
+    transform: translateY(3px) scale(0.97);
+    transition: opacity 0.12s cubic-bezier(0.16, 1, 0.3, 1), transform 0.12s cubic-bezier(0.16, 1, 0.3, 1);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    text-align: left;
+    display: none;
+  }
+  .ow-tooltip.visible {
+    display: block;
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  .ow-tooltip .tip-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 2px;
+  }
+  .ow-tooltip .tip-title {
+    font-weight: 700;
+    font-size: 11.5px;
+    color: #38bdf8;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .ow-tooltip .tip-badge {
+    font-size: 9.5px;
+    font-weight: 700;
+    font-family: 'JetBrains Mono', monospace;
+    padding: 1px 5px;
+    border-radius: 3px;
+    background: rgba(56, 189, 248, 0.2);
+    color: #7dd3fc;
+    border: 1px solid rgba(56, 189, 248, 0.35);
+    white-space: nowrap;
+  }
+  .ow-tooltip .tip-desc {
+    font-size: 11px;
+    color: #cbd5e1;
+    margin: 0;
+    line-height: 1.35;
+  }
+  .ow-tooltip .tip-hint {
+    font-size: 10px;
+    color: #94a3b8;
+    margin-top: 3px;
+    font-style: italic;
+    display: block;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    padding-top: 3px;
+  }
+</style>
+
+<div id="ow-tooltip" class="ow-tooltip" role="tooltip"></div>
+
+<script>
+(function() {
+  const tipEl = document.getElementById('ow-tooltip');
+  if (!tipEl) return;
+
+  let showTimer = null;
+  let hideTimer = null;
+  let activeTarget = null;
+  let isWarm = false;
+  let warmTimer = null;
+
+  // Stamp definitions lookup (standard defaults + dynamic)
+  const DEFAULT_STAMPS = {
+    '8': { name: 'Standard Work Shift', hours: 8, desc: '8 hours regular duty shift' },
+    'WO': { name: 'Weekly Off', hours: 0, desc: 'Weekly scheduled rest day (0 hours)' },
+    'PH': { name: 'Public Holiday', hours: 8, desc: 'Official paid public holiday' },
+    'SL': { name: 'Sick Leave', hours: 0, desc: 'Authorized medical/sick leave' },
+    'AL': { name: 'Annual Leave', hours: 0, desc: 'Approved annual paid vacation leave' },
+    'A': { name: 'Absent', hours: 0, desc: 'Unexcused absence from duty (0 hours)' },
+    'V': { name: 'Vacation', hours: 0, desc: 'Annual leave/vacation period' },
+    'HD': { name: 'Half Day', hours: 4, desc: 'Half day duty shift (4 hours)' }
+  };
+
+  function getStampInfo(code) {
+    if (!code) return null;
+    const clean = code.trim().toUpperCase();
+    if (typeof stampsData !== 'undefined' && Array.isArray(stampsData)) {
+      const found = stampsData.find(s => (s.code || '').toUpperCase() === clean);
+      if (found) {
+        return {
+          code: clean,
+          name: found.name || `${clean} Shift`,
+          hours: found.hours !== undefined ? found.hours : 8,
+          desc: found.name ? `${found.name} (${found.hours}h)` : `${clean} Shift`
+        };
+      }
+    }
+    if (typeof universalStampsData !== 'undefined' && Array.isArray(universalStampsData)) {
+      const found = universalStampsData.find(s => (s.code || '').toUpperCase() === clean);
+      if (found) {
+        return {
+          code: clean,
+          name: found.name || `${clean} Shift`,
+          hours: found.hours !== undefined ? found.hours : 8,
+          desc: found.name ? `${found.name} (${found.hours}h)` : `${clean} Shift`
+        };
+      }
+    }
+    if (DEFAULT_STAMPS[clean]) {
+      const d = DEFAULT_STAMPS[clean];
+      return { code: clean, name: d.name, hours: d.hours, desc: d.desc };
+    }
+    return { code: clean, name: `${clean} Shift`, hours: 8, desc: `${clean} Attendance Stamp` };
+  }
+
+  function resolveTooltip(el) {
+    if (!el) return null;
+
+    // 1. Explicit data-tooltip
+    const custom = el.getAttribute('data-tooltip');
+    if (custom) {
+      try {
+        if (custom.startsWith('{') && custom.endsWith('}')) {
+          return JSON.parse(custom);
+        }
+      } catch (e) {}
+      return { desc: custom };
+    }
+
+    // 2. Existing title attribute (prevent native browser tooltip clash)
+    const titleAttr = el.getAttribute('title');
+    if (titleAttr && titleAttr.trim()) {
+      el.setAttribute('data-tooltip', titleAttr);
+      el.removeAttribute('title');
+      return { desc: titleAttr };
+    }
+
+    // 3. Attendance Stamps in Grid (.day-cell)
+    if (el.classList.contains('day-cell')) {
+      const code = el.innerText.trim().toUpperCase() || '8';
+      const info = getStampInfo(code);
+      const dayIdx = el.getAttribute('data-day');
+      const dayNum = dayIdx !== null ? parseInt(dayIdx) + 1 : '';
+      const mode = typeof activeStamp !== 'undefined' ? activeStamp : 'TOGGLE';
+      const hint = mode === 'TOGGLE' 
+        ? 'Click to cycle to next stamp' 
+        : `Click to stamp as ${mode}`;
+      return {
+        title: dayNum ? `Day ${dayNum} • ${code}` : `Stamp: ${code}`,
+        badge: info ? `${info.hours}h` : '',
+        desc: info ? info.name : 'Attendance Stamp',
+        hint: hint
+      };
+    }
+
+    // 4. Stamp Palette Buttons (.palette-btn)
+    if (el.classList.contains('palette-btn')) {
+      const text = el.innerText.trim();
+      if (text.includes('Cycle') || text.includes('TOGGLE')) {
+        return {
+          title: '🔄 Cycle Mode',
+          badge: 'Mode',
+          desc: 'Click attendance cells repeatedly to cycle through all configured stamps.',
+          hint: 'Default active stamp mode'
+        };
+      }
+      const code = text.split(' ')[0].trim().toUpperCase();
+      const info = getStampInfo(code);
+      return {
+        title: `🏷️ Stamp: ${code}`,
+        badge: info ? `${info.hours}h` : '',
+        desc: info ? info.name : `${code} Shift Stamp`,
+        hint: `Click to select. Any clicked cell will be stamped as ${code}.`
+      };
+    }
+
+    // 5. Configured Stamp Tags (.legend-items .tag)
+    if (el.classList.contains('tag') && el.closest('.legend-items')) {
+      const text = el.innerText.trim();
+      const code = text.split(' ')[0].trim();
+      const info = getStampInfo(code);
+      return {
+        title: `🏷️ Configured Stamp: ${code}`,
+        badge: info ? `${info.hours}h` : '',
+        desc: info ? `${info.name} (${info.hours} work hours assigned)` : 'Shift parameter definition',
+        hint: 'Managed in Department Setup & Data'
+      };
+    }
+
+    // 6. Day Column Headers in Attendance Grid (.th-day-hdr)
+    if (el.classList.contains('th-day-hdr')) {
+      const text = el.innerText.trim();
+      const isFri = el.classList.contains('hdr-friday');
+      const isWk = el.classList.contains('hdr-weekend');
+      let status = isFri ? 'Friday (Weekend / Rest Day)' : (isWk ? 'Weekend' : 'Regular Workday');
+      return {
+        title: `📅 Day ${text}`,
+        badge: isFri ? 'Friday' : (isWk ? 'Weekend' : 'Workday'),
+        desc: status,
+        hint: 'All days default to 8h unless an off-day stamp is set'
+      };
+    }
+
+    const id = el.id || '';
+    const text = (el.innerText || '').trim();
+
+    // 7. Export & Package Generation Actions
+    if (id === 'btnZipAll' || text.includes('Download Full ZIP')) {
+      return { title: '📦 Full ZIP Package', badge: 'ZIP', desc: 'Download a complete ZIP containing all company PDFs, Excel workbooks, and the Master Excel.' };
+    }
+    if (id === 'btnMasterPdf' || text.includes('Master PDF')) {
+      return { title: '📑 Master PDF Report', badge: 'PDF', desc: 'Consolidated A4 landscape report with staff grouped by company, ready for manager and director signatures.' };
+    }
+    if (id === 'btnMasterExcel' || text.includes('Master Excel')) {
+      return { title: '📊 Master Excel Report', badge: 'Excel', desc: 'Consolidated multi-company workbook with automated formulas, overtime, and hour calculations.' };
+    }
+    if (id === 'btnZipPdfs' || text.includes('All PDFs')) {
+      return { title: '📄 All Company PDFs', badge: 'ZIP', desc: 'Download a ZIP archive of individual timesheet PDFs for each company.' };
+    }
+    if (id === 'btnZipExcels' || text.includes('All Excels')) {
+      return { title: '📊 All Company Excels', badge: 'ZIP', desc: 'Download a ZIP archive of individual timesheet Excels for each company.' };
+    }
+
+    // Top Navigation & Actions
+    if (el.classList.contains('btn-drawer-open')) {
+      return { title: '⚙️ Department Setup & Data', badge: 'Menu', desc: 'Open configuration drawer to manage Staff Roster, Signatures, Departments, Companies, Properties & Stamps.' };
+    }
+    if (id === 'btnSaveMonth' || text.includes('Save Month')) {
+      return { title: '💾 Save Month', badge: 'Save', desc: 'Save all attendance grid changes, custom stamps, and calculated hours for this month to the database.' };
+    }
+    if (text.includes('Sign Out') || el.getAttribute('href') === '/logout') {
+      return { title: '🚪 Sign Out', badge: 'Auth', desc: 'Securely end your session and log out of the dashboard.' };
+    }
+    if (text.includes('Master Admin Portal') || el.getAttribute('href') === '/?ws=admin') {
+      return { title: '👑 Master Admin Portal', badge: 'Admin', desc: 'Open system supervisor portal to manage user accounts, permissions, and department setups.' };
+    }
+
+    // Grid Action Buttons
+    if (text.includes('Add All Employees')) {
+      return { title: '👥 Add All Associates', badge: 'Batch', desc: 'Add all registered active staff from this department to the current month’s attendance sheet.' };
+    }
+    if (text.includes('Auto 4 Weekly Offs')) {
+      return { title: '🎲 Auto Weekly Offs', badge: 'Auto', desc: 'Automatically distribute 4 weekly off (WO) days for each employee across the month.' };
+    }
+    if (text.includes('Reset All to 8')) {
+      return { title: '🔄 Reset All to 8h', badge: 'Reset', desc: 'Reset all days of the month for all associates to standard 8-hour working shifts.' };
+    }
+    if (id === 'btnQuickSelectToggle' || text.includes('Select All')) {
+      return { title: '☑️ Quick Select', badge: 'Select', desc: 'Select or deselect all visible associates on the grid for bulk removal.' };
+    }
+    if (el.classList.contains('btn-row-del')) {
+      return { title: '🗑️ Remove Associate', badge: 'Remove', desc: 'Remove this associate from the current month’s attendance sheet.' };
+    }
+    if (id === 'btnGridClear') {
+      return { title: '✕ Clear Filter', badge: 'Filter', desc: 'Clear search query and show all rows on the grid.' };
+    }
+    if (el.classList.contains('filter-pill')) {
+      return { title: `Filter: ${text}`, badge: 'Filter', desc: 'Show only staff belonging to this specific company or department.' };
+    }
+
+    // Quick Schedule Entry Shortcut
+    if (text.includes('Save & Add to Sheet')) {
+      return { title: '💾 Save Schedule', badge: 'Shortcut', desc: 'Apply entered off-days/stamps to this associate and add them to the attendance grid.' };
+    }
+    if (text.includes('Reset Boxes')) {
+      return { title: '🔄 Reset Form', badge: 'Shortcut', desc: 'Clear all shortcut date and stamp input boxes back to empty defaults.' };
+    }
+    if (text.includes('Search') && el.closest('.shortcut-emp-section')) {
+      return { title: '🔍 Search Staff', badge: 'Shortcut', desc: 'Look up employee and load their existing schedule into the shortcut boxes.' };
+    }
+    if (el.classList.contains('btn-clear-selection')) {
+      return { title: '✕ Clear Employee', badge: 'Shortcut', desc: 'Deselect current employee and reset search box.' };
+    }
+    if (el.classList.contains('btn-remove-pair')) {
+      return { title: '✕ Remove Date Pair', badge: 'Shortcut', desc: 'Remove this date/stamp entry.' };
+    }
+
+    // Isolated Sheet Banner Actions
+    if (text.includes('Save Changes') && el.closest('#sheetIsolationBanner')) {
+      return { title: '💾 Save Sheet Edits', badge: 'Save', desc: 'Save all modified hours for this isolated company sheet.' };
+    }
+    if (id === 'btnIsolatedExcel' || text.includes('Re-Generate Excel')) {
+      return { title: '📊 Re-Generate Excel', badge: 'Export', desc: 'Export updated Excel workbook for this company with latest changes.' };
+    }
+    if (id === 'btnIsolatedPdf' || text.includes('Re-Generate PDF')) {
+      return { title: '📄 Re-Generate PDF', badge: 'Export', desc: 'Export updated PDF report for this company with latest changes.' };
+    }
+    if (text.includes('Show Full Grid')) {
+      return { title: '✕ Exit Isolation', badge: 'Grid', desc: 'Exit isolated company view and show all staff on the grid.' };
+    }
+
+    // Drawer Tabs & Navigation
+    if (el.classList.contains('btn-close-drawer')) {
+      return { title: '✕ Close Drawer', badge: 'Close', desc: 'Close setup drawer and return to the main timesheet.' };
+    }
+    if (el.classList.contains('drawer-tab')) {
+      if (text.includes('Signatures')) return { title: '✍️ Report Signatures', badge: 'Tab', desc: 'Configure official authorization signatures printed on PDF and Excel exports.' };
+      if (text.includes('Staff')) return { title: '👥 Staff Roster', badge: 'Tab', desc: 'Add, update, or remove registered employees and Iqama numbers in this department.' };
+      if (text.includes('Departments')) return { title: '🏢 Departments', badge: 'Tab', desc: 'Manage department codes and workspace divisions.' };
+      if (text.includes('Companies')) return { title: '🤝 Companies', badge: 'Tab', desc: 'Manage employer and contractor companies.' };
+      if (text.includes('Properties')) return { title: '🏨 Properties', badge: 'Tab', desc: 'Manage property locations (e.g. RMH, MEA).' };
+      if (text.includes('Stamps')) return { title: '🏷️ Stamps & Hours', badge: 'Tab', desc: 'Define attendance stamp codes, assigned hours, and custom colors.' };
+    }
+
+    // Drawer Form Submissions & Actions
+    if (id === 'btnSaveAuthorizer') return { title: '➕ Save Signer', badge: 'Form', desc: 'Save report authorization signature to database.' };
+    if (id === 'btnSaveEmployee') return { title: '➕ Save Associate', badge: 'Form', desc: 'Save employee to department roster.' };
+    if (id === 'btnSaveDepartment') return { title: '➕ Save Department', badge: 'Form', desc: 'Save department code and title in database.' };
+    if (id === 'btnSaveCompany') return { title: '➕ Save Company', badge: 'Form', desc: 'Add company to employer dropdown list.' };
+    if (id === 'btnSaveProperty') return { title: '➕ Save Property', badge: 'Form', desc: 'Add property location code to system.' };
+    if (id === 'btnSaveStamp') return { title: '💾 Save Stamp Definition', badge: 'Form', desc: 'Save custom stamp code, assigned working hours, and colors.' };
+    if (text.includes('Restore Universal Stamps') || text.includes('Restore Defaults')) {
+      return { title: '🔄 Restore Universal Stamps', badge: 'Reset', desc: 'Reset all attendance stamps to standard factory defaults (8, WO, PH, SL, AL, A, V).' };
+    }
+    if (el.classList.contains('btn-toggle-active')) {
+      return { title: '✓ Toggle Active Status', badge: 'Status', desc: 'Toggle item between Active (included in reports) and Inactive.' };
+    }
+    if (text.trim() === '✏️ Edit' || text.includes('Edit')) {
+      return { title: '✏️ Edit Entry', badge: 'Edit', desc: 'Load this entry into the form above to edit.' };
+    }
+    if (text.trim() === 'Delete' && el.classList.contains('btn-danger')) {
+      return { title: '🗑️ Delete Entry', badge: 'Delete', desc: 'Permanently remove this entry from the database.' };
+    }
+
+    // Color Preset Buttons
+    if (el.getAttribute('onclick') && (el.getAttribute('onclick').includes('applyPreset') || el.getAttribute('onclick').includes('applyColorPreset'))) {
+      return { title: '🎨 Color Preset', badge: 'Palette', desc: `Apply ${text} background and text colors to this stamp definition.` };
+    }
+
+    // Dropdowns & Inputs
+    if (id === 'selWorkspace') return { title: '🏢 Department Workspace', badge: 'Select', desc: 'Switch to inspect or edit attendance for a different colleague’s department.' };
+    if (id === 'selYear') return { title: '📅 Period Year', badge: 'Select', desc: 'Switch timesheet year.' };
+    if (id === 'selMonth') return { title: '📅 Period Month', badge: 'Select', desc: 'Switch timesheet month.' };
+    if (id === 'gridFilterInput') return { title: '🔍 Search Table', badge: 'Filter', desc: 'Filter rows in real-time by employee name, Iqama ID, company, or property.' };
+    if (id === 'shortcutEmpSearch') return { title: '🔍 Search Staff', badge: 'Input', desc: 'Search associate by name, Iqama ID, or company for quick scheduling.' };
+
+    // Print Preview Buttons (report_print.html)
+    if (text.includes('Print / Save PDF')) {
+      return { title: '🖨️ Print / Save PDF', badge: 'Print', desc: 'Open system print dialog to print hardcopy or save as PDF.' };
+    }
+    if (text.includes('Close Preview')) {
+      return { title: '✕ Close Preview', badge: 'Close', desc: 'Close this print preview window.' };
+    }
+    if (text.includes('Back to Dashboard')) {
+      return { title: '← Back to Dashboard', badge: 'Nav', desc: 'Return to the main attendance grid.' };
+    }
+
+    // Login Form (login.html)
+    if (el.classList.contains('btn-toggle-pw')) {
+      return { title: '👁️ Password Visibility', badge: 'Input', desc: 'Show or hide password characters.' };
+    }
+    if (el.classList.contains('btn-submit') && el.closest('.login-card')) {
+      return { title: '🔐 Sign In', badge: 'Auth', desc: 'Authenticate and sign in to OfficeWork dashboard.' };
+    }
+
+    // Admin Panel (admin.html)
+    if (id === 'btnSaveUniversalStamp' || text.includes('Save Universal Stamp')) {
+      return { title: '💾 Save Universal Stamp', badge: 'Admin', desc: 'Update standard stamp parameters across all departments.' };
+    }
+    if (text.includes('Reset Universal Stamps to Factory')) {
+      return { title: '🔄 Reset Universal Stamps', badge: 'Admin', desc: 'Restore standard factory universal stamp parameters.' };
+    }
+
+    // Generic button fallback
+    if (el.tagName === 'BUTTON' || el.classList.contains('btn')) {
+      const label = text.replace(/[^\w\s-]/g, '').trim();
+      if (label) {
+        return { title: label, desc: `Click to ${label.toLowerCase()}.` };
+      }
+    }
+
+    return null;
+  }
+
+  function positionTooltip(target) {
+    const rect = target.getBoundingClientRect();
+    const tipRect = tipEl.getBoundingClientRect();
+    const margin = 8;
+
+    let top = rect.top - tipRect.height - margin;
+    let left = rect.left + (rect.width - tipRect.width) / 2;
+
+    if (top < 10) {
+      top = rect.bottom + margin;
+    }
+
+    const maxLeft = window.innerWidth - tipRect.width - 12;
+    if (left < 12) left = 12;
+    if (left > maxLeft) left = maxLeft;
+
+    tipEl.style.top = Math.round(top) + 'px';
+    tipEl.style.left = Math.round(left) + 'px';
+  }
+
+  function renderTooltipContent(data) {
+    let html = '';
+    if (data.title || data.badge) {
+      html += '<div class="tip-header">';
+      if (data.title) html += `<span class="tip-title">${data.title}</span>`;
+      if (data.badge) html += `<span class="tip-badge">${data.badge}</span>`;
+      html += '</div>';
+    }
+    if (data.desc) {
+      html += `<p class="tip-desc">${data.desc}</p>`;
+    }
+    if (data.hint) {
+      html += `<span class="tip-hint">${data.hint}</span>`;
+    }
+    return html;
+  }
+
+  function showTooltip(target, data) {
+    tipEl.innerHTML = renderTooltipContent(data);
+    tipEl.style.display = 'block';
+    positionTooltip(target);
+    tipEl.classList.add('visible');
+    isWarm = true;
+    clearTimeout(warmTimer);
+    warmTimer = setTimeout(() => { isWarm = false; }, 800);
+  }
+
+  function hideTooltip() {
+    clearTimeout(showTimer);
+    tipEl.classList.remove('visible');
+    hideTimer = setTimeout(() => {
+      if (!tipEl.classList.contains('visible')) {
+        tipEl.style.display = 'none';
+      }
+    }, 150);
+  }
+
+  const SELECTOR = 'button, .btn, .palette-btn, .day-cell, .legend-items .tag, .drawer-tab, .filter-pill, .btn-row-del, .btn-clear-selection, .btn-remove-pair, .btn-toggle-active, .btn-drawer-open, .btn-close-drawer, [data-tooltip], [title], #selWorkspace, #selYear, #selMonth, #gridFilterInput, #shortcutEmpSearch, #masterGridCheckbox, .th-day-hdr';
+
+  document.addEventListener('mouseover', function(e) {
+    const target = e.target.closest(SELECTOR);
+    if (!target) {
+      if (activeTarget) {
+        hideTooltip();
+        activeTarget = null;
+      }
+      return;
+    }
+
+    if (target === activeTarget) return;
+    activeTarget = target;
+
+    const data = resolveTooltip(target);
+    if (!data || (!data.desc && !data.title)) {
+      hideTooltip();
+      return;
+    }
+
+    clearTimeout(showTimer);
+    clearTimeout(hideTimer);
+
+    const delay = isWarm ? 20 : 120;
+    showTimer = setTimeout(() => {
+      showTooltip(target, data);
+    }, delay);
+  }, true);
+
+  document.addEventListener('mouseout', function(e) {
+    const target = e.target.closest(SELECTOR);
+    if (target && target === activeTarget) {
+      hideTooltip();
+      activeTarget = null;
+    }
+  }, true);
+
+  window.addEventListener('scroll', hideTooltip, { passive: true });
+  document.addEventListener('click', hideTooltip, { passive: true });
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') hideTooltip();
+  });
+})();
+</script>
